@@ -650,7 +650,7 @@ void Client::DrawMenu() {
         if (UIWidgets::Button("Disconnect", UIWidgets::ButtonOptions())) {
             Disconnect();
         }
-    } else if (UIWidgets::Button("Connect", UIWidgets::ButtonOptions())) {
+    } else if (UIWidgets::Button("Connect", UIWidgets::ButtonOptions().Color(UIWidgets::Colors::LightBlue))) {
         Connect();
     }
 

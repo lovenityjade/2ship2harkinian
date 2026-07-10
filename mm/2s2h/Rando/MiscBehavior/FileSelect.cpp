@@ -492,13 +492,8 @@ void RegisterShoulds() {
         }
 
         // Rand Icon
-        if (isArchipelago[fileIndex]) {
-            gDPSetPrimColor(POLY_OPA_DISP++, 0x00, 0x00, 110, 180, 255,
-                            gFileSelectState->nameAlpha[fileIndex]);
-        } else {
-            gDPSetPrimColor(POLY_OPA_DISP++, 0x00, 0x00, 255, 255, 255,
-                            gFileSelectState->nameAlpha[fileIndex]);
-        }
+        gDPSetPrimColor(POLY_OPA_DISP++, 0x00, 0x00, 255, 255, 255,
+                        gFileSelectState->nameAlpha[fileIndex]);
 
         if (gFileSelectState->isOwlSave[fileIndex + FILE_NUM_OWL_SAVE_OFFSET]) {
             gSP1Quadrangle(POLY_OPA_DISP++, 0, 2, 3, 1, 0); // Left aligned
