@@ -82,7 +82,7 @@ void Client::ConfigureHandlers() {
 
     client->set_room_info_handler([this]() {
         std::list<std::string> tags;
-        client->ConnectSlot(CVarGetString(SlotCVar, ""), CVarGetString(PasswordCVar, ""), 0b0101, tags, { 0, 6, 3 });
+        client->ConnectSlot(CVarGetString(SlotCVar, ""), CVarGetString(PasswordCVar, ""), 0b0111, tags, { 0, 6, 3 });
     });
 
     client->set_slot_connected_handler([this](const nlohmann::json slotData) {
