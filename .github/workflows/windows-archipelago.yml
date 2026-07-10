@@ -1,0 +1,70 @@
+name: Windows Archipelago Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-2ship-otr:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $(cat .github/workflows/apt-deps.txt) libzip-dev zipcmp zipmerge ziptool
+      - name: Generate 2ship.o2r
+        run: |
+          cmake --no-warn-unused-cli -S . -B build-otr -G Ninja -DCMAKE_BUILD_TYPE:STRING=Release
+          cmake --build build-otr --config Release --target Generate2ShipOtr --parallel 3
+      - name: Upload 2ship.o2r
+        uses: actions/upload-artifact@v7
+        with:
+          name: 2ship.o2r
+          path: 2ship.o2r
+          retention-days: 3
+
+  build-windows:
+    needs: generate-2ship-otr
+    runs-on: windows-latest
+    steps:
+      - name: Install Ninja
+        run: |
+          choco install ninja -y
+          Remove-Item -Path "C:\ProgramData\Chocolatey\bin\ccache.exe" -Force -ErrorAction SilentlyContinue
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Configure MSVC x64
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Download 2ship.o2r
+        uses: actions/download-artifact@v8
+        with:
+          name: 2ship.o2r
+          path: build-windows/mm
+      - name: Build and package
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+          VCPKG_DEFAULT_TRIPLET: x64-windows
+        run: |
+          cmake -S . -B build-windows -G Ninja -DCMAKE_MAKE_PROGRAM=ninja -DCMAKE_BUILD_TYPE:STRING=Release
+          cmake --build build-windows --config Release --parallel 10
+          cd build-windows
+          cpack
+          cd ..
+          Move-Item _packages\*.zip _packages\2ship-archipelago-windows-x64.zip
+          Expand-Archive -Path _packages\2ship-archipelago-windows-x64.zip -DestinationPath 2ship-archipelago-windows-x64
+      - name: Upload Windows x64 package
+        uses: actions/upload-artifact@v7
+        with:
+          name: 2ship-archipelago-windows-x64
+          path: 2ship-archipelago-windows-x64
+          retention-days: 7
