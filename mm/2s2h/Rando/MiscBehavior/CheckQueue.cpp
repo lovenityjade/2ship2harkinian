@@ -25,8 +25,10 @@ static void GiveArchipelagoLocation(Actor*, PlayState*) {
         pendingArchipelagoLocation.isLocal ? "yourself" : pendingArchipelagoLocation.playerName;
     CustomMessage::Entry entry = {
         .textboxType = 2,
-        .icon = pendingArchipelagoLocation.isLocal && pendingArchipelagoLocation.localItemId != RI_UNKNOWN ?
-                    Rando::StaticData::GetIconForZMessage(pendingArchipelagoLocation.localItemId) : 0xFE,
+        .icon = static_cast<uint8_t>(
+            pendingArchipelagoLocation.isLocal && pendingArchipelagoLocation.localItemId != RI_UNKNOWN
+                ? Rando::StaticData::GetIconForZMessage(pendingArchipelagoLocation.localItemId)
+                : 0xFE),
         .msg = "You found " + pendingArchipelagoLocation.itemName + " for " + destination + "!",
     };
     CustomMessage::SetActiveCustomMessage(entry.msg, entry);
