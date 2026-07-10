@@ -37,11 +37,21 @@ constexpr const char* JunkIcon = "Archipelago Junk Icon";
 constexpr const char* ConnectionIcon = "Archipelago Connection Icon";
 
 unsigned int NormalizeItemFlags(RandoItemId itemId, unsigned int flags) {
-    if ((itemId >= RI_SONG_DOUBLE_TIME && itemId <= RI_SONG_TIME) || itemId == RI_PROGRESSIVE_LULLABY) {
-        flags |= APClient::ItemFlags::FLAG_ADVANCEMENT;
-    }
-    if (itemId == RI_HEART_PIECE) {
-        flags |= APClient::ItemFlags::FLAG_NEVER_EXCLUDE;
+    switch (Rando::StaticData::Items[itemId].randoItemType) {
+        case RITYPE_MAJOR:
+        case RITYPE_BOSS_KEY:
+        case RITYPE_SMALL_KEY:
+        case RITYPE_MASK:
+            flags |= APClient::ItemFlags::FLAG_ADVANCEMENT;
+            break;
+        case RITYPE_LESSER:
+        case RITYPE_HEALTH:
+        case RITYPE_STRAY_FAIRY:
+        case RITYPE_SKULLTULA_TOKEN:
+            flags |= APClient::ItemFlags::FLAG_NEVER_EXCLUDE;
+            break;
+        default:
+            break;
     }
     return flags;
 }
