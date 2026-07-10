@@ -520,9 +520,8 @@ void Client::GiveReceivedItemPresentation(Actor*, PlayState*) {
 }
 
 void Client::DrawReceivedItemPresentation(Actor* actor, PlayState*) {
-    const ReceivedItem& item = Instance().pendingReceivedPresentation;
     Matrix_Scale(30.0f, 30.0f, 30.0f, MTXMODE_APPLY);
-    Rando::DrawItem(item.itemId, RC_UNKNOWN, actor);
+    Rando::DrawItem(static_cast<RandoItemId>(CUSTOM_ITEM_PARAM), RC_UNKNOWN, actor);
 }
 
 void Client::SendGoal() {
