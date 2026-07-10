@@ -141,7 +141,7 @@ void Client::ConfigureHandlers() {
     });
 
     client->set_items_received_handler([this](const std::list<APClient::NetworkItem>& items) {
-        const uint64_t nextItem = static_cast<uint64_t>(CVarGetInteger(LastItemCVar, 0));
+        const int nextItem = CVarGetInteger(LastItemCVar, 0);
         for (const auto& item : items) {
             if (item.index < nextItem || item.item < ItemIdBase || item.item >= ItemIdBase + RI_MAX) {
                 continue;

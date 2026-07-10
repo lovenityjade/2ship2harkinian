@@ -113,7 +113,7 @@ class Client {
   private:
     struct ReceivedItem {
         RandoItemId itemId;
-        uint64_t index;
+        int index;
         std::string sender;
         unsigned int flags;
         int64_t location;
