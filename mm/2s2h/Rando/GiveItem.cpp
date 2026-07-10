@@ -10,6 +10,9 @@ extern "C" {
 
 void Rando::GiveItem(RandoItemId randoItemId) {
     switch (randoItemId) {
+        case RI_SKELETON_KEY:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_SKELETON_KEY);
+            break;
         case RI_CLOCK_TOWN_STRAY_FAIRY:
             SET_WEEKEVENTREG(WEEKEVENTREG_08_80);
             break;

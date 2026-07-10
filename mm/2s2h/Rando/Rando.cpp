@@ -10,6 +10,10 @@
 #include <ship/Context.h>
 #include "2s2h/Network/Archipelago/Archipelago.h"
 
+extern "C" s32 Rando_HasSkeletonKey(void) {
+    return IS_RANDO && Flags_GetRandoInf(RANDO_INF_OBTAINED_SKELETON_KEY);
+}
+
 // When a save is loaded, we want to unregister all hooks and re-register them if it's a rando save
 void OnSaveLoadHandler(s16 fileNum) {
     Archipelago::Client& apClient = Archipelago::Client::Instance();

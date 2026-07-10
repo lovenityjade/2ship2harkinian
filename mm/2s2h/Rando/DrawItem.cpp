@@ -516,6 +516,16 @@ static void DrawArchipelagoItemImpl(unsigned int flags) {
     CLOSE_DISPS(gPlayState->state.gfxCtx);
 }
 
+static void DrawSkeletonKey() {
+    OPEN_DISPS(gPlayState->state.gfxCtx);
+
+    Gfx_SetupDL25_Opa(gPlayState->state.gfxCtx);
+    gDPSetEnvColor(POLY_OPA_DISP++, 255, 255, 170, 255);
+    gSPDisplayList(POLY_OPA_DISP++, ResourceMgr_LoadGfxByName("objects/object_key/gSkeletonKeyDL"));
+
+    CLOSE_DISPS(gPlayState->state.gfxCtx);
+}
+
 void Rando::DrawMysteryItem() {
     DrawMysteryItemImpl();
 }
@@ -540,6 +550,9 @@ void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* 
         case RI_STONE_TOWER_SMALL_KEY:
         case RI_WOODFALL_SMALL_KEY:
             DrawSmallKey(randoItemId);
+            break;
+        case RI_SKELETON_KEY:
+            DrawSkeletonKey();
             break;
         case RI_GREAT_BAY_BOSS_KEY:
         case RI_SNOWHEAD_BOSS_KEY:

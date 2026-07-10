@@ -263,6 +263,7 @@ std::map<RandoItemId, RandoStaticItem> Items = {
     RI(RI_WOODFALL_MAP,               "the",  "Woodfall Map",               RITYPE_LESSER,          ITEM_DUNGEON_MAP,                GI_MAP,                      GID_DUNGEON_MAP),
     RI(RI_WOODFALL_SMALL_KEY,         "a",    "Woodfall Small Key",         RITYPE_SMALL_KEY,       ITEM_KEY_SMALL,                  GI_KEY_SMALL,                GID_KEY_SMALL),
     RI(RI_WOODFALL_STRAY_FAIRY,       "a",    "Woodfall Stray Fairy",       RITYPE_STRAY_FAIRY,     ITEM_STRAY_FAIRIES,              GI_STRAY_FAIRY,              GID_NONE),
+    RI(RI_SKELETON_KEY,               "the",  "Skeleton Key",               RITYPE_MAJOR,           ITEM_NONE,                       GI_KEY_SMALL,                GID_KEY_SMALL),
 };
 
 std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
@@ -349,6 +350,8 @@ u8 GetIconForZMessage(RandoItemId randoItemId) {
             return GI_MAGIC_JAR_BIG;
         case RI_GREAT_SPIN_ATTACK:
             return GI_SWORD_KOKIRI;
+        case RI_SKELETON_KEY:
+            return GI_KEY_SMALL;
         default:
             break;
     }

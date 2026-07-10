@@ -45,4 +45,6 @@ std::vector<RandoCheckId> FindMultiItemPlacement(RandoItemId randoItemId);
 
 } // namespace Rando
 
+extern "C" s32 Rando_HasSkeletonKey(void);
+
 #endif

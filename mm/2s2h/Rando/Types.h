@@ -2606,6 +2606,7 @@ typedef enum {
     RI_WOODFALL_MAP,
     RI_WOODFALL_SMALL_KEY,
     RI_WOODFALL_STRAY_FAIRY,
+    RI_SKELETON_KEY,
     RI_MAX_TRAP, // Just used for ice trap ice cube model
     RI_MAX,
 } RandoItemId;
@@ -2992,6 +2993,7 @@ typedef enum {
     RO_TRAP_AMOUNT,
     RO_TRIFORCE_PIECES_MAX,
     RO_TRIFORCE_PIECES_REQUIRED,
+    RO_SKELETON_KEY,
     RO_MAX,
 } RandoOptionId;
 
@@ -3118,6 +3120,7 @@ typedef enum {
     RANDO_INF_OBTAINED_OCARINA_BUTTON_C_UP,
     RANDO_INF_OBTAINED_SONG_DOUBLE_TIME,
     RANDO_INF_OBTAINED_SONG_INVERTED_TIME,
+    RANDO_INF_OBTAINED_SKELETON_KEY,
     RANDO_INF_MAX,
 } RandoInf;
 
