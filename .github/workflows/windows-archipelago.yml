@@ -93,6 +93,7 @@ jobs:
           path: 2ship-archipelago-windows-x64
           retention-days: 7
       - name: Save vcpkg cache
+        if: always()
         uses: actions/cache/save@v5
         with:
           path: vcpkg

@@ -223,6 +223,7 @@ if(BUILD_ARCHIPELAGO AND NOT CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch|CafeOS|An
         ${wswrap_SOURCE_DIR}/include
         ${apclientpp_SOURCE_DIR}
     )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _WEBSOCKETPP_CPP11_STL_)
     target_link_libraries(${PROJECT_NAME} PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 endif()
 
