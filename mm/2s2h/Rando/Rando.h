@@ -5,7 +5,14 @@
 #include "Types.h"
 #include "variables.h"
 
-#define IS_RANDO (gSaveContext.save.shipSaveInfo.saveType == SAVETYPE_RANDO)
+#define IS_ARCHIPELAGO (gSaveContext.save.shipSaveInfo.saveType == SAVETYPE_ARCHIPELAGO)
+#define IS_RANDO                                                                                                      \
+    (gSaveContext.save.shipSaveInfo.saveType == SAVETYPE_RANDO || gSaveContext.save.shipSaveInfo.saveType == SAVETYPE_ARCHIPELAGO)
+
+enum RandoRunMode {
+    RANDO_RUN_MODE_LOCAL = 0,
+    RANDO_RUN_MODE_ARCHIPELAGO = 1,
+};
 #define RANDO_SAVE_CHECKS gSaveContext.save.shipSaveInfo.rando.randoSaveChecks
 #define RANDO_SAVE_OPTIONS gSaveContext.save.shipSaveInfo.rando.randoSaveOptions
 #define RANDO_EVENTS gSaveContext.save.shipSaveInfo.rando.randoEvents
@@ -14,6 +21,8 @@ namespace Rando {
 
 void Init();
 void DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId = RC_UNKNOWN, Actor* actor = nullptr);
+void DrawMysteryItem();
+void DrawArchipelagoItem(unsigned int flags);
 void GiveItem(RandoItemId randoItemId);
 void RemoveItem(RandoItemId randoItemId);
 RandoItemId CurrentJunkItem(RandoCheckId randoCheckId = RC_UNKNOWN);

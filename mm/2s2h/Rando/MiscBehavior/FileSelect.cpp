@@ -2,6 +2,8 @@
 #include "Enhancements/FrameInterpolation/FrameInterpolation.h"
 #include "2s2h_assets.h"
 #include "2s2h/BenGui/CosmeticEditor.h"
+#include "2s2h/BenGui/Notification.h"
+#include "2s2h/Network/Archipelago/Archipelago.h"
 
 extern "C" {
 #include "z64save.h"
@@ -9,9 +11,13 @@ extern "C" {
 #include "macros.h"
 #include "overlays/gamestates/ovl_file_choose/z_file_select.h"
 #include "misc/title_static/title_static.h"
+#include "gfxprint.h"
 extern s16 sWindowContentColors[3];
 extern FileSelectState* gFileSelectState;
 }
+
+#define dgFileSelArchiButtonTex "__OTR__textures/title_static/gFileSelArchiButtonTex"
+static const ALIGN_ASSET(2) char gFileSelArchiButtonTex[] = dgFileSelArchiButtonTex;
 
 typedef struct {
     char tex[512];
@@ -136,7 +142,109 @@ Sprite* GetSeedTexture(const uint8_t index) {
 }
 
 u8 isRando[FILE_NUM_MAX_WITH_OWL_SAVE];
+u8 isArchipelago[FILE_NUM_MAX_WITH_OWL_SAVE];
 u32 seedHashes[FILE_NUM_MAX_WITH_OWL_SAVE];
+char archipelagoServers[FILE_NUM_MAX_WITH_OWL_SAVE][128];
+char archipelagoSlots[FILE_NUM_MAX_WITH_OWL_SAVE][64];
+char archipelagoSeeds[FILE_NUM_MAX_WITH_OWL_SAVE][64];
+
+static bool IsArchipelagoCreationMode() {
+    return CVarGetInteger("gRando.Enabled", 0) &&
+           CVarGetInteger("gRando.Mode", RANDO_RUN_MODE_LOCAL) == RANDO_RUN_MODE_ARCHIPELAGO;
+}
+
+static bool CurrentConnectionMatches(int fileIndex) {
+    Archipelago::Client& client = Archipelago::Client::Instance();
+    return client.IsReady() && client.GetServerAddress() == archipelagoServers[fileIndex] &&
+           client.GetSlotName() == archipelagoSlots[fileIndex] && client.GetSeedName() == archipelagoSeeds[fileIndex];
+}
+
+static void EmitArchipelagoFileSelectError(const char* message) {
+    Notification::Emit({
+        .prefix = "Archipelago:",
+        .prefixColor = ImVec4(1.0f, 0.35f, 0.35f, 1.0f),
+        .message = message,
+    });
+}
+
+extern "C" bool Archipelago_CanCreateFile() {
+    if (!IsArchipelagoCreationMode()) {
+        return true;
+    }
+    Archipelago::Client& client = Archipelago::Client::Instance();
+    if (!client.IsReady()) {
+        if (client.GetStatus() == Archipelago::ConnectionStatus::Disconnected ||
+            client.GetStatus() == Archipelago::ConnectionStatus::Error) {
+            client.Connect();
+        }
+        EmitArchipelagoFileSelectError("connecting; wait for synchronization before starting this file.");
+        return false;
+    }
+    return true;
+}
+
+extern "C" bool Archipelago_CanOpenFile(s32 fileIndex) {
+    if (fileIndex < 0 || fileIndex >= FILE_NUM_MAX_WITH_OWL_SAVE || !isArchipelago[fileIndex]) {
+        return true;
+    }
+    Archipelago::Client& client = Archipelago::Client::Instance();
+    if (client.GetServerAddress() != archipelagoServers[fileIndex] ||
+        client.GetSlotName() != archipelagoSlots[fileIndex]) {
+        EmitArchipelagoFileSelectError("this save belongs to a different server or slot.");
+        return false;
+    }
+    if (!client.IsReady()) {
+        if (client.GetStatus() == Archipelago::ConnectionStatus::Disconnected ||
+            client.GetStatus() == Archipelago::ConnectionStatus::Error) {
+            client.Connect();
+        }
+        EmitArchipelagoFileSelectError("connecting; wait until Start Archipelago is ready.");
+        return false;
+    }
+    if (client.GetSeedName() != archipelagoSeeds[fileIndex]) {
+        EmitArchipelagoFileSelectError("this slot is connected to a different seed.");
+        return false;
+    }
+    return true;
+}
+
+extern "C" void Archipelago_DrawFileSelectInfo() {
+    if (gFileSelectState == nullptr ||
+        (gFileSelectState->configMode != CM_MAIN_MENU && gFileSelectState->menuMode != FS_MENU_MODE_SELECT)) {
+        return;
+    }
+
+    int fileIndex = gFileSelectState->selectedFileIndex;
+    const bool selectedArchipelago = fileIndex >= 0 && fileIndex < FILE_NUM_MAX_WITH_OWL_SAVE &&
+                                     isArchipelago[fileIndex] &&
+                                     gFileSelectState->menuMode == FS_MENU_MODE_SELECT;
+    if (!selectedArchipelago && !IsArchipelagoCreationMode()) {
+        return;
+    }
+
+    Archipelago::Client& client = Archipelago::Client::Instance();
+    const std::string currentServer = client.GetServerAddress();
+    const std::string currentSlot = client.GetSlotName();
+    const char* server = selectedArchipelago ? archipelagoServers[fileIndex] : currentServer.c_str();
+    const char* slot = selectedArchipelago ? archipelagoSlots[fileIndex] : currentSlot.c_str();
+    const bool ready = selectedArchipelago ? CurrentConnectionMatches(fileIndex) : client.IsReady();
+    const char* status = ready ? "Ready" : client.IsConnected() ? "Wrong room or synchronizing" : "Not connected";
+
+    OPEN_DISPS(gFileSelectState->state.gfxCtx);
+    OPEN_PRINTER(POLY_OPA_DISP);
+    GfxPrint_SetColor(&printer, ready ? 120 : 255, ready ? 255 : 120, 120, 255);
+    GfxPrint_SetPos(&printer, 8, 15);
+    GfxPrint_Printf(&printer, ready ? "Start Archipelago" : "Archipelago unavailable");
+    GfxPrint_SetColor(&printer, 220, 220, 220, 255);
+    GfxPrint_SetPos(&printer, 8, 17);
+    GfxPrint_Printf(&printer, "Server: %.28s", server);
+    GfxPrint_SetPos(&printer, 8, 18);
+    GfxPrint_Printf(&printer, "Slot: %.30s", slot);
+    GfxPrint_SetPos(&printer, 8, 19);
+    GfxPrint_Printf(&printer, "Status: %s", status);
+    CLOSE_PRINTER(printer, POLY_OPA_DISP);
+    CLOSE_DISPS(gFileSelectState->state.gfxCtx);
+}
 
 // 5 rectangles per save file:
 // Rand Left Aligned
@@ -148,6 +256,7 @@ Vtx sRandVtxData[20 * FILE_NUM_MAX];
 
 constexpr s16 RAND_ICON_HEIGHT = 16;
 constexpr s16 RAND_ICON_WIDTH = 32;
+constexpr s16 ARCHIPELAGO_ICON_WIDTH = 44;
 
 // Initialize all vtx data with dummy/default values
 void CreateRandSaveTypeVtxData() {
@@ -195,6 +304,8 @@ void SetRandSaveTypeVtxData() {
     for (int i = 0; i < FILE_NUM_MAX; i++, startY -= 16, vtxId += 4) {
         int posY;
         int posX = gFileSelectState->windowPosX + 163;
+        const s16 iconWidth = isArchipelago[i] ? ARCHIPELAGO_ICON_WIDTH : RAND_ICON_WIDTH;
+        const s16 centeredOffset = (52 - iconWidth) / 2;
 
         // Compute real Y position based on current file select state
         if ((gFileSelectState->configMode == 0x10) && (i == gFileSelectState->copyDestFileIndex)) {
@@ -211,10 +322,10 @@ void SetRandSaveTypeVtxData() {
         for (int j = 0; j < 4; j++, vtxId += 4) {
             // x-coord (left)
             sRandVtxData[vtxId + 0].v.ob[0] = sRandVtxData[vtxId + 2].v.ob[0] =
-                posX + (j % 2 ? 1 : 0) + ((j > 1) ? 10 : 0);
+                posX + (j % 2 ? 1 : 0) + ((j > 1) ? centeredOffset : 0);
             // x-coord (right)
             sRandVtxData[vtxId + 1].v.ob[0] = sRandVtxData[vtxId + 3].v.ob[0] =
-                sRandVtxData[vtxId + 0].v.ob[0] + RAND_ICON_WIDTH;
+                sRandVtxData[vtxId + 0].v.ob[0] + iconWidth;
 
             // y-coord (top)
             sRandVtxData[vtxId + 0].v.ob[1] = sRandVtxData[vtxId + 1].v.ob[1] = posY - (j % 2 ? 1 : 0);
@@ -225,7 +336,7 @@ void SetRandSaveTypeVtxData() {
             // texture coordinates
             sRandVtxData[vtxId + 0].v.tc[0] = sRandVtxData[vtxId + 0].v.tc[1] = sRandVtxData[vtxId + 1].v.tc[1] =
                 sRandVtxData[vtxId + 2].v.tc[0] = 0;
-            sRandVtxData[vtxId + 1].v.tc[0] = sRandVtxData[vtxId + 3].v.tc[0] = RAND_ICON_WIDTH << 5;
+            sRandVtxData[vtxId + 1].v.tc[0] = sRandVtxData[vtxId + 3].v.tc[0] = iconWidth << 5;
             sRandVtxData[vtxId + 2].v.tc[1] = sRandVtxData[vtxId + 3].v.tc[1] = RAND_ICON_HEIGHT << 5;
         }
 
@@ -362,9 +473,15 @@ void RegisterShoulds() {
 
         gSPVertex(POLY_OPA_DISP++, (uintptr_t)&sRandVtxData[20 * fileIndex], 20, 0);
 
-        gDPLoadTextureBlock_4b(POLY_OPA_DISP++, gFileSelRandIconTex, G_IM_FMT_I, RAND_ICON_WIDTH, RAND_ICON_HEIGHT, 0,
-                               G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK,
-                               G_TX_NOLOD, G_TX_NOLOD);
+        if (isArchipelago[fileIndex]) {
+            gDPLoadTextureBlock(POLY_OPA_DISP++, gFileSelArchiButtonTex, G_IM_FMT_IA, G_IM_SIZ_16b,
+                                ARCHIPELAGO_ICON_WIDTH, RAND_ICON_HEIGHT, 0, G_TX_NOMIRROR | G_TX_CLAMP,
+                                G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
+        } else {
+            gDPLoadTextureBlock_4b(POLY_OPA_DISP++, gFileSelRandIconTex, G_IM_FMT_I, RAND_ICON_WIDTH, RAND_ICON_HEIGHT,
+                                   0, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK,
+                                   G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
+        }
 
         // Rand Icon (shadow)
         gDPSetPrimColor(POLY_OPA_DISP++, 0x00, 0x00, 0, 0, 0, gFileSelectState->nameAlpha[fileIndex]);
@@ -413,11 +530,19 @@ void Rando::MiscBehavior::InitFileSelect() {
 
     GameInteractor::Instance->RegisterGameHook<GameInteractor::OnFileSelectSaveLoad>(
         [](s16 fileNum, bool isOwlSave, SaveContext* saveContext) {
-            isRando[fileNum + (isOwlSave ? FILE_NUM_OWL_SAVE_OFFSET : 0)] =
-                saveContext->save.shipSaveInfo.saveType == SAVETYPE_RANDO;
-            if (isRando[fileNum + (isOwlSave ? FILE_NUM_OWL_SAVE_OFFSET : 0)]) {
-                seedHashes[fileNum + (isOwlSave ? FILE_NUM_OWL_SAVE_OFFSET : 0)] =
-                    gSaveContext.save.shipSaveInfo.rando.finalSeed;
+            const int index = fileNum + (isOwlSave ? FILE_NUM_OWL_SAVE_OFFSET : 0);
+            isArchipelago[index] = saveContext->save.shipSaveInfo.saveType == SAVETYPE_ARCHIPELAGO;
+            isRando[index] = saveContext->save.shipSaveInfo.saveType == SAVETYPE_RANDO || isArchipelago[index];
+            if (isRando[index]) {
+                seedHashes[index] = saveContext->save.shipSaveInfo.rando.finalSeed;
+            }
+            if (isArchipelago[index]) {
+                snprintf(archipelagoServers[index], sizeof(archipelagoServers[index]), "%s",
+                         saveContext->save.shipSaveInfo.rando.archipelagoServer);
+                snprintf(archipelagoSlots[index], sizeof(archipelagoSlots[index]), "%s",
+                         saveContext->save.shipSaveInfo.rando.archipelagoSlot);
+                snprintf(archipelagoSeeds[index], sizeof(archipelagoSeeds[index]), "%s",
+                         saveContext->save.shipSaveInfo.rando.archipelagoSeed);
             }
         });
 }

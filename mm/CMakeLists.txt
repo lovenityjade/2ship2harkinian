@@ -178,6 +178,54 @@ set(ALL_FILES
 ################################################################################
 add_executable(${PROJECT_NAME} ${ALL_FILES})
 
+option(BUILD_ARCHIPELAGO "Build the native Archipelago client" ON)
+
+if(BUILD_ARCHIPELAGO AND NOT CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch|CafeOS|Android|iOS")
+    include(FetchContent)
+    add_compile_definitions(ASIO_STANDALONE ENABLE_ARCHIPELAGO)
+
+    FetchContent_Declare(
+        valijson
+        GIT_REPOSITORY https://github.com/tristanpenman/valijson.git
+        GIT_TAG v1.0.6
+    )
+    FetchContent_Declare(
+        asio
+        GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+        GIT_TAG asio-1-30-2
+    )
+    FetchContent_Declare(
+        websocketpp
+        GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
+        GIT_TAG 0.8.2
+        # Header-only dependency; avoid its pre-CMake-3.5 project on CMake 4.
+        SOURCE_SUBDIR _header_only
+    )
+    FetchContent_Declare(
+        wswrap
+        GIT_REPOSITORY https://github.com/black-sliver/wswrap.git
+        GIT_TAG d0505e0ec53a26743f11051949a0dc66bcf44951
+    )
+    FetchContent_Declare(
+        apclientpp
+        GIT_REPOSITORY https://github.com/black-sliver/apclientpp.git
+        GIT_TAG 7f33a3849887983378258c2fe8fc3887f687c430
+    )
+
+    set(APCLIENTPP_BUILD_TESTING OFF CACHE BOOL "Do not build apclientpp tests" FORCE)
+    FetchContent_MakeAvailable(valijson asio websocketpp wswrap apclientpp)
+    find_package(OpenSSL REQUIRED)
+
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${asio_SOURCE_DIR}/asio/include
+        ${valijson_SOURCE_DIR}/include
+        ${websocketpp_SOURCE_DIR}
+        ${wswrap_SOURCE_DIR}/include
+        ${apclientpp_SOURCE_DIR}
+    )
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+endif()
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
 endif()

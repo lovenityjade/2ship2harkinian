@@ -2,6 +2,7 @@
 #include <libultraship/bridge/consolevariablebridge.h>
 #include "2s2h/ObjectExtension/ActorListIndex.h"
 #include "2s2h/CustomItem/CustomItem.h"
+#include "2s2h/Network/Archipelago/Archipelago.h"
 
 extern "C" {
 #include "functions.h"
@@ -44,10 +45,24 @@ EnItem00* spawnReplacementItem(Vec3f& pos, Rando::StaticData::RandoStaticCheck& 
             }
         },
         [](Actor* actor, PlayState* play) {
+            const RandoCheckId checkId = (RandoCheckId)CUSTOM_ITEM_PARAM;
             auto& randoSaveCheck = RANDO_SAVE_CHECKS[CUSTOM_ITEM_PARAM];
             Matrix_Scale(30.0f, 30.0f, 30.0f, MTXMODE_APPLY);
-            Rando::DrawItem(Rando::ConvertItem(randoSaveCheck.randoItemId, (RandoCheckId)CUSTOM_ITEM_PARAM),
-                            (RandoCheckId)CUSTOM_ITEM_PARAM, actor);
+            if (Rando::StaticData::Checks[checkId].randoCheckType == RCTYPE_FREESTANDING &&
+                CVarGetInteger("gRando.MysteryFreestandingItems", 0)) {
+                Rando::DrawMysteryItem();
+                return;
+            }
+            const Archipelago::ScoutedLocation* location =
+                Archipelago::Client::Instance().GetScoutedLocation(checkId);
+            if (location != nullptr && !location->isLocal) {
+                Rando::DrawArchipelagoItem(location->flags);
+                return;
+            }
+            const RandoItemId itemId = location != nullptr && location->localItemId != RI_UNKNOWN ?
+                                           location->localItemId :
+                                           Rando::ConvertItem(randoSaveCheck.randoItemId, checkId);
+            Rando::DrawItem(itemId, checkId, actor);
         });
 }
 

@@ -491,6 +491,39 @@ void DrawTycoonWallet() {
     CLOSE_DISPS(gPlayState->state.gfxCtx);
 }
 
+static void DrawMysteryItemImpl() {
+    OPEN_DISPS(gPlayState->state.gfxCtx);
+    Gfx_SetupDL25_Opa(gPlayState->state.gfxCtx);
+    Matrix_Scale(0.035f, 0.035f, 0.035f, MTXMODE_APPLY);
+    MATRIX_FINALIZE_AND_LOAD(POLY_OPA_DISP++, gPlayState->state.gfxCtx);
+    gSPDisplayList(POLY_OPA_DISP++, ResourceMgr_LoadGfxByName("objects/object_mystery_item/gMysteryItemDL"));
+    CLOSE_DISPS(gPlayState->state.gfxCtx);
+}
+
+static void DrawArchipelagoItemImpl(unsigned int flags) {
+    const char* model = "objects/object_archipelago_item/gArchipelagoJunkDL";
+    if (flags & 0x5) {
+        model = "objects/object_archipelago_item/gArchipelagoProgressiveDL";
+    } else if (flags & 0x2) {
+        model = "objects/object_archipelago_item/gArchipelagoItemDL";
+    }
+
+    OPEN_DISPS(gPlayState->state.gfxCtx);
+    Gfx_SetupDL25_Opa(gPlayState->state.gfxCtx);
+    Matrix_Scale(0.035f, 0.035f, 0.035f, MTXMODE_APPLY);
+    MATRIX_FINALIZE_AND_LOAD(POLY_OPA_DISP++, gPlayState->state.gfxCtx);
+    gSPDisplayList(POLY_OPA_DISP++, ResourceMgr_LoadGfxByName(model));
+    CLOSE_DISPS(gPlayState->state.gfxCtx);
+}
+
+void Rando::DrawMysteryItem() {
+    DrawMysteryItemImpl();
+}
+
+void Rando::DrawArchipelagoItem(unsigned int flags) {
+    DrawArchipelagoItemImpl(flags);
+}
+
 void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* actor) {
     // Apply hilites with actor world pos before drawing
     if (actor != NULL) {

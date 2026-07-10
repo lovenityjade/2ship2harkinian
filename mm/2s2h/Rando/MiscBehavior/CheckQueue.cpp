@@ -7,6 +7,7 @@
 #include "2s2h/Rando/StaticData/StaticData.h"
 #include "2s2h/ShipUtils.h"
 #include "Traps.h"
+#include "2s2h/Network/Archipelago/Archipelago.h"
 
 extern "C" {
 #include "variables.h"
@@ -16,6 +17,34 @@ extern s16 D_801CFF94[250];
 }
 
 static bool queued = false;
+static RandoCheckId pendingArchipelagoCheck = RC_UNKNOWN;
+static Archipelago::ScoutedLocation pendingArchipelagoLocation;
+
+static void GiveArchipelagoLocation(Actor*, PlayState*) {
+    const std::string destination =
+        pendingArchipelagoLocation.isLocal ? "yourself" : pendingArchipelagoLocation.playerName;
+    CustomMessage::Entry entry = {
+        .textboxType = 2,
+        .icon = pendingArchipelagoLocation.isLocal && pendingArchipelagoLocation.localItemId != RI_UNKNOWN ?
+                    Rando::StaticData::GetIconForZMessage(pendingArchipelagoLocation.localItemId) : 0xFE,
+        .msg = "You found " + pendingArchipelagoLocation.itemName + " for " + destination + "!",
+    };
+    CustomMessage::SetActiveCustomMessage(entry.msg, entry);
+    auto& saveCheck = RANDO_SAVE_CHECKS[pendingArchipelagoCheck];
+    saveCheck.cycleObtained = true;
+    saveCheck.obtained = true;
+    saveCheck.eligible = false;
+    queued = false;
+}
+
+static void DrawArchipelagoLocation(Actor* actor, PlayState*) {
+    Matrix_Scale(30.0f, 30.0f, 30.0f, MTXMODE_APPLY);
+    if (pendingArchipelagoLocation.isLocal && pendingArchipelagoLocation.localItemId != RI_UNKNOWN) {
+        Rando::DrawItem(pendingArchipelagoLocation.localItemId, pendingArchipelagoCheck, actor);
+    } else {
+        Rando::DrawArchipelagoItem(pendingArchipelagoLocation.flags);
+    }
+}
 
 // This function handles queuing up item gives that the player has been marked as eligible for. If you are looking for
 // the behavior of the actual giving itself, the heavy lifting is done by the GameInteractor queue. This function is
@@ -32,9 +61,33 @@ void Rando::MiscBehavior::CheckQueue() {
     }
 
     for (auto& [randoCheckId, randoStaticCheck] : Rando::StaticData::Checks) {
-        auto randoSaveCheck = RANDO_SAVE_CHECKS[randoCheckId];
+        auto& randoSaveCheck = RANDO_SAVE_CHECKS[randoCheckId];
 
         if (randoSaveCheck.eligible) {
+            Archipelago::Client& apClient = Archipelago::Client::Instance();
+            const Archipelago::ScoutedLocation* apLocation = apClient.GetScoutedLocation(randoCheckId);
+            if (apLocation != nullptr && apClient.IsImportantLocation(randoCheckId)) {
+                pendingArchipelagoCheck = randoCheckId;
+                pendingArchipelagoLocation = *apLocation;
+                queued = true;
+                apClient.MarkLocationPresentation(randoCheckId);
+                apClient.CheckLocation(randoCheckId);
+
+                GameInteractor::Instance->events.emplace_back(GIEventGiveItem{
+                    .showGetItemCutscene = true,
+                    .param = static_cast<int16_t>(randoCheckId),
+                    .giveItem = GiveArchipelagoLocation,
+                    .drawItem = DrawArchipelagoLocation,
+                });
+                return;
+            }
+            if (apClient.CheckLocation(randoCheckId)) {
+                apClient.NotifyLocationSent(randoCheckId);
+                randoSaveCheck.cycleObtained = true;
+                randoSaveCheck.obtained = true;
+                randoSaveCheck.eligible = false;
+                return;
+            }
             queued = true;
 
             GameInteractor::Instance->events.emplace_back(GIEventGiveItem{

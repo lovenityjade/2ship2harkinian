@@ -20,6 +20,10 @@
 #include "2s2h/BenGui/CosmeticEditor.h"
 #include <libultraship/bridge/consolevariablebridge.h>
 
+bool Archipelago_CanCreateFile(void);
+bool Archipelago_CanOpenFile(s32 fileIndex);
+void Archipelago_DrawFileSelectInfo(void);
+
 s32 D_808144F10 = 100;
 f32 D_808144F14 = 8.0f;
 f32 D_808144F18 = 100.0f;
@@ -255,6 +259,10 @@ void FileSelect_UpdateMainMenu(GameState* thisx) {
         if (this->buttonIndex <= FS_BTN_MAIN_FILE_3) {
             if (!gSaveContext.flashSaveAvailable) {
                 if (!NO_FLASH_SLOT_OCCUPIED(sramCtx, this->buttonIndex)) {
+                    if (!Archipelago_CanCreateFile()) {
+                        Audio_PlaySfx(NA_SE_SY_FSEL_ERROR);
+                        return;
+                    }
                     Audio_PlaySfx(NA_SE_SY_FSEL_DECIDE_L);
                     this->configMode = CM_ROTATE_TO_NAME_ENTRY;
                     this->kbdButton = FS_KBD_BTN_NONE;
@@ -279,6 +287,10 @@ void FileSelect_UpdateMainMenu(GameState* thisx) {
                     this->nextTitleLabel = FS_TITLE_OPEN_FILE;
                 }
             } else if (!SLOT_OCCUPIED(this, this->buttonIndex)) {
+                if (!Archipelago_CanCreateFile()) {
+                    Audio_PlaySfx(NA_SE_SY_FSEL_ERROR);
+                    return;
+                }
                 Audio_PlaySfx(NA_SE_SY_FSEL_DECIDE_L);
                 this->configMode = CM_ROTATE_TO_NAME_ENTRY;
                 this->kbdButton = FS_KBD_BTN_NONE;
@@ -2077,6 +2089,10 @@ void FileSelect_ConfirmFile(GameState* thisx) {
 
     if (CHECK_BTN_ALL(input->press.button, BTN_START) || (CHECK_BTN_ALL(input->press.button, BTN_A))) {
         if (this->confirmButtonIndex == FS_BTN_CONFIRM_YES) {
+            if (!Archipelago_CanOpenFile(this->buttonIndex)) {
+                Audio_PlaySfx(NA_SE_SY_FSEL_ERROR);
+                return;
+            }
             Rumble_Request(300.0f, 180, 20, 100);
             Audio_PlaySfx(NA_SE_SY_FSEL_DECIDE_L);
             this->selectMode = SM_FADE_OUT;
@@ -2427,6 +2443,7 @@ void FileSelect_Main(GameState* thisx) {
     FrameInterpolation_StartRecord();
     FileSelect_UpdateAndDrawSkybox(this);
     gFileSelectDrawFuncs[this->menuMode](&this->state);
+    Archipelago_DrawFileSelectInfo();
     FrameInterpolation_StopRecord();
 
     Gfx_SetupDL39_Opa(this->state.gfxCtx);
