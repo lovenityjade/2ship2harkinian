@@ -228,20 +228,19 @@ extern "C" void Archipelago_DrawFileSelectInfo() {
     const char* server = selectedArchipelago ? archipelagoServers[fileIndex] : currentServer.c_str();
     const char* slot = selectedArchipelago ? archipelagoSlots[fileIndex] : currentSlot.c_str();
     const bool ready = selectedArchipelago ? CurrentConnectionMatches(fileIndex) : client.IsReady();
-    const char* status = ready ? "Ready" : client.IsConnected() ? "Wrong room or synchronizing" : "Not connected";
+    const char* status = ready ? "Start Archipelago" :
+                         client.IsConnected() ? "Archipelago: synchronizing" : "Archipelago: not connected";
 
     OPEN_DISPS(gFileSelectState->state.gfxCtx);
     OPEN_PRINTER(POLY_OPA_DISP);
     GfxPrint_SetColor(&printer, ready ? 120 : 255, ready ? 255 : 120, 120, 255);
-    GfxPrint_SetPos(&printer, 8, 15);
-    GfxPrint_Printf(&printer, ready ? "Start Archipelago" : "Archipelago unavailable");
+    GfxPrint_SetPos(&printer, 8, 3);
+    GfxPrint_Printf(&printer, status);
     GfxPrint_SetColor(&printer, 220, 220, 220, 255);
-    GfxPrint_SetPos(&printer, 8, 17);
-    GfxPrint_Printf(&printer, "Server: %.28s", server);
-    GfxPrint_SetPos(&printer, 8, 18);
-    GfxPrint_Printf(&printer, "Slot: %.30s", slot);
-    GfxPrint_SetPos(&printer, 8, 19);
-    GfxPrint_Printf(&printer, "Status: %s", status);
+    GfxPrint_SetPos(&printer, 8, 4);
+    GfxPrint_Printf(&printer, "Server: %.23s", server);
+    GfxPrint_SetPos(&printer, 8, 5);
+    GfxPrint_Printf(&printer, "Slot: %.25s", slot);
     CLOSE_PRINTER(printer, POLY_OPA_DISP);
     CLOSE_DISPS(gFileSelectState->state.gfxCtx);
 }
@@ -493,7 +492,13 @@ void RegisterShoulds() {
         }
 
         // Rand Icon
-        gDPSetPrimColor(POLY_OPA_DISP++, 0x00, 0x00, 255, 255, 255, gFileSelectState->nameAlpha[fileIndex]);
+        if (isArchipelago[fileIndex]) {
+            gDPSetPrimColor(POLY_OPA_DISP++, 0x00, 0x00, 110, 180, 255,
+                            gFileSelectState->nameAlpha[fileIndex]);
+        } else {
+            gDPSetPrimColor(POLY_OPA_DISP++, 0x00, 0x00, 255, 255, 255,
+                            gFileSelectState->nameAlpha[fileIndex]);
+        }
 
         if (gFileSelectState->isOwlSave[fileIndex + FILE_NUM_OWL_SAVE_OFFSET]) {
             gSP1Quadrangle(POLY_OPA_DISP++, 0, 2, 3, 1, 0); // Left aligned
