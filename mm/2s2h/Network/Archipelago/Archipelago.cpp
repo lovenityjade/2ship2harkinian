@@ -13,6 +13,7 @@
 
 #include "2s2h/BenGui/Notification.h"
 #include "2s2h/BenGui/UIWidgets.hpp"
+#include "2s2h/CustomItem/CustomItem.h"
 #include "2s2h/CustomMessage/CustomMessage.h"
 #include "2s2h/GameInteractor/GameInteractor.h"
 #include "2s2h/Rando/Rando.h"
