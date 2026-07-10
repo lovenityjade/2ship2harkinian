@@ -18,6 +18,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y $(cat .github/workflows/apt-deps.txt) libzip-dev zipcmp zipmerge ziptool
+      - name: Install tinyxml2
+        run: |
+          wget https://github.com/leethomason/tinyxml2/archive/refs/tags/10.0.0.tar.gz
+          tar -xzf 10.0.0.tar.gz
+          cmake -S tinyxml2-10.0.0 -B tinyxml2-build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build tinyxml2-build
+          sudo cmake --install tinyxml2-build
       - name: Generate 2ship.o2r
         run: |
           cmake --no-warn-unused-cli -S . -B build-otr -G Ninja -DCMAKE_BUILD_TYPE:STRING=Release
