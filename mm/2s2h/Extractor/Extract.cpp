@@ -1,5 +1,6 @@
 #ifdef _WIN32
 #include <Windows.h>
+#include <cderr.h>
 #include <winuser.h>
 #include <shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
