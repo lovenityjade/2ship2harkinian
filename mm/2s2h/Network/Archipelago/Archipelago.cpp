@@ -36,6 +36,17 @@ constexpr const char* UsefulIcon = "Archipelago Useful Icon";
 constexpr const char* JunkIcon = "Archipelago Junk Icon";
 constexpr const char* ConnectionIcon = "Archipelago Connection Icon";
 
+std::string GetTriforceProgressMessage() {
+    const uint32_t required = RANDO_SAVE_OPTIONS[RO_TRIFORCE_PIECES_REQUIRED];
+    const uint32_t collected = gSaveContext.save.shipSaveInfo.rando.foundTriforcePieces + 1;
+    if (collected >= required) {
+        return " You completed the Triforce!";
+    }
+
+    const uint32_t remaining = required - collected;
+    return " " + std::to_string(remaining) + (remaining == 1 ? " piece remains." : " pieces remain.");
+}
+
 unsigned int NormalizeItemFlags(RandoItemId itemId, unsigned int flags) {
     switch (Rando::StaticData::Items[itemId].randoItemType) {
         case RITYPE_MAJOR:
@@ -517,11 +528,13 @@ void Client::GiveReceivedItemPresentation(Actor*, PlayState*) {
     const ReceivedItem& item = self.pendingReceivedPresentation;
     const std::string itemName = Rando::StaticData::GetItemName(item.itemId, true);
     const bool fromSelf = self.client != nullptr && item.sender == self.client->get_slot();
+    const std::string progress = item.itemId == RI_TRIFORCE_PIECE ? GetTriforceProgressMessage() : "";
     CustomMessage::Entry entry = {
         .textboxType = 2,
         .icon = Rando::StaticData::GetIconForZMessage(item.itemId),
-        .msg = fromSelf ? "You received " + itemName + "!" :
-                          "You received " + itemName + " from " + item.sender + "!",
+        .msg = (fromSelf ? "You received " + itemName + "!" :
+                           "You received " + itemName + " from " + item.sender + "!") +
+               progress,
     };
     CustomMessage::SetActiveCustomMessage(entry.msg, entry);
     Rando::GiveItem(item.itemId);

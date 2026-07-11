@@ -20,16 +20,30 @@ static bool queued = false;
 static RandoCheckId pendingArchipelagoCheck = RC_UNKNOWN;
 static Archipelago::ScoutedLocation pendingArchipelagoLocation;
 
+static std::string GetTriforceProgressMessage() {
+    const uint32_t required = RANDO_SAVE_OPTIONS[RO_TRIFORCE_PIECES_REQUIRED];
+    const uint32_t collected = gSaveContext.save.shipSaveInfo.rando.foundTriforcePieces + 1;
+    if (collected >= required) {
+        return " You completed the Triforce!";
+    }
+
+    const uint32_t remaining = required - collected;
+    return " " + std::to_string(remaining) + (remaining == 1 ? " piece remains." : " pieces remain.");
+}
+
 static void GiveArchipelagoLocation(Actor*, PlayState*) {
     const std::string destination =
         pendingArchipelagoLocation.isLocal ? "yourself" : pendingArchipelagoLocation.playerName;
+    const bool isLocalTriforce = pendingArchipelagoLocation.isLocal &&
+                                  pendingArchipelagoLocation.localItemId == RI_TRIFORCE_PIECE;
     CustomMessage::Entry entry = {
         .textboxType = 2,
         .icon = static_cast<uint8_t>(
             pendingArchipelagoLocation.isLocal && pendingArchipelagoLocation.localItemId != RI_UNKNOWN
                 ? Rando::StaticData::GetIconForZMessage(pendingArchipelagoLocation.localItemId)
                 : 0xFE),
-        .msg = "You found " + pendingArchipelagoLocation.itemName + " for " + destination + "!",
+        .msg = "You found " + pendingArchipelagoLocation.itemName + " for " + destination + "!" +
+               (isLocalTriforce ? GetTriforceProgressMessage() : ""),
     };
     CustomMessage::SetActiveCustomMessage(entry.msg, entry);
     auto& saveCheck = RANDO_SAVE_CHECKS[pendingArchipelagoCheck];
@@ -109,10 +123,16 @@ void Rando::MiscBehavior::CheckQueue() {
                             randoItemId = Rando::CurrentJunkItem((RandoCheckId)CUSTOM_ITEM_PARAM);
                         }
                         if (randoItemId == RI_TRIFORCE_PIECE) {
-                            if (gSaveContext.save.shipSaveInfo.rando.foundTriforcePieces + 1 >=
-                                RANDO_SAVE_OPTIONS[RO_TRIFORCE_PIECES_REQUIRED]) {
+                            const uint32_t collected =
+                                gSaveContext.save.shipSaveInfo.rando.foundTriforcePieces + 1;
+                            const uint32_t required = RANDO_SAVE_OPTIONS[RO_TRIFORCE_PIECES_REQUIRED];
+                            if (collected >= required) {
                                 prefix = "You";
                                 message = "completed the Triforce";
+                            } else {
+                                const uint32_t remaining = required - collected;
+                                message += "! " + std::to_string(remaining) +
+                                           (remaining == 1 ? " piece remains" : " pieces remain");
                             }
                             randoItemId = RI_TRIFORCE_PIECE_PREVIOUS;
                         }
