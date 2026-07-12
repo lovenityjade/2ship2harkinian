@@ -86,6 +86,11 @@ jobs:
           cd ..
           Move-Item _packages\*.zip _packages\2ship-archipelago-windows-x64.zip
           Expand-Archive -Path _packages\2ship-archipelago-windows-x64.zip -DestinationPath 2ship-archipelago-windows-x64
+          $ssl = Get-ChildItem 2ship-archipelago-windows-x64 -Filter "libssl*.dll"
+          $crypto = Get-ChildItem 2ship-archipelago-windows-x64 -Filter "libcrypto*.dll"
+          if (-not $ssl -or -not $crypto) {
+            throw "The Windows package is missing required OpenSSL runtime DLLs."
+          }
       - name: Upload Windows x64 package
         uses: actions/upload-artifact@v7
         with:

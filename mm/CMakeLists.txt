@@ -652,7 +652,15 @@ else()
 
 endif()
 
-if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin|NintendoSwitch|CafeOS")
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+INSTALL(TARGETS 2ship
+    RUNTIME_DEPENDENCIES
+        PRE_EXCLUDE_REGEXES "api-ms-.*" "ext-ms-.*"
+        POST_EXCLUDE_REGEXES ".*[\\\\/]system32[\\\\/].*"
+    DESTINATION .
+    COMPONENT 2s2h
+)
+elseif(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin|NintendoSwitch|CafeOS")
 INSTALL(TARGETS 2ship DESTINATION . COMPONENT 2s2h)
 endif()
 
