@@ -81,6 +81,8 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           cmake -S . -B build-windows -G Ninja -DCMAKE_MAKE_PROGRAM=ninja -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           cmake --build build-windows --config Release --parallel 10
+          Copy-Item "C:\Program Files\OpenSSL\bin\libssl-3-x64.dll" build-windows\mm
+          Copy-Item "C:\Program Files\OpenSSL\bin\libcrypto-3-x64.dll" build-windows\mm
           cd build-windows
           cpack
           cd ..
