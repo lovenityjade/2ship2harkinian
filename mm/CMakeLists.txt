@@ -655,6 +655,7 @@ endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 INSTALL(TARGETS 2ship
     RUNTIME_DEPENDENCIES
+        DIRECTORIES "${OPENSSL_RUNTIME_DIR}"
         PRE_EXCLUDE_REGEXES "api-ms-.*" "ext-ms-.*"
         POST_EXCLUDE_REGEXES ".*[\\\\/]system32[\\\\/].*"
     DESTINATION .
