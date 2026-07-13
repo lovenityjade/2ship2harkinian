@@ -72,6 +72,11 @@ jobs:
         with:
           name: 2ship.o2r
           path: build-windows/mm
+      - name: Default new Windows installs to OpenGL
+        run: >-
+          cmake
+          -Dsource_file="${{ github.workspace }}/libultraship/src/ship/config/Config.cpp"
+          -P CMake/DefaultWindowsOpenGL.cmake
       - name: Build and package
         env:
           VCPKG_ROOT: ${{ github.workspace }}\vcpkg
