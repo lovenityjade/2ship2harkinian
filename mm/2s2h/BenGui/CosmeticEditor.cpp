@@ -770,7 +770,6 @@ void CosmeticEditorUpdateTick() {
         option.currentColor = ImVec4(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
         CVarSetColor(option.valuesCvar, color);
         CVarSetInteger(option.changedCvar, 1);
-        CosmeticEditorRefreshElement(option);
 
         if (!syncRainbow) {
             index += static_cast<int>(60 * rainbowSpeed);

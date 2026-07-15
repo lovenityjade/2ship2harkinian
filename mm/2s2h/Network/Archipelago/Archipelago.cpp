@@ -30,7 +30,7 @@ constexpr const char* SlotCVar = "gRemote.Archipelago.SlotName";
 constexpr const char* PasswordCVar = "gRemote.Archipelago.Password";
 constexpr const char* LastItemCVar = "gRemote.Archipelago.LastReceivedItem";
 constexpr const char* LastSessionCVar = "gRemote.Archipelago.LastSession";
-constexpr const char* WorldVersion = "0.2";
+constexpr const char* WorldVersion = "0.4";
 constexpr const char* ProgressiveIcon = "Archipelago Progressive Icon";
 constexpr const char* UsefulIcon = "Archipelago Useful Icon";
 constexpr const char* JunkIcon = "Archipelago Junk Icon";
@@ -136,6 +136,8 @@ void Client::ConfigureHandlers() {
             Ship::Context::GetInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
         }
         status = ConnectionStatus::Connected;
+        const auto checkedLocations = client->get_checked_locations();
+        RecordCheckedLocations(std::list<int64_t>(checkedLocations.begin(), checkedLocations.end()));
         PrepareRandomizerSettings();
         Log("Connected as " + client->get_slot() + ".");
         SyncCompletedChecks();
@@ -172,6 +174,10 @@ void Client::ConfigureHandlers() {
             receivedItems.push({ itemId, item.index, client->get_player_alias(item.player),
                                  NormalizeItemFlags(itemId, item.flags), item.location });
         }
+    });
+
+    client->set_location_checked_handler([this](const std::list<int64_t>& locations) {
+        RecordCheckedLocations(locations);
     });
 
     client->set_location_info_handler([this](const std::list<APClient::NetworkItem>& items) {
@@ -269,6 +275,7 @@ void Client::Disconnect() {
     status = ConnectionStatus::Disconnected;
     goalSent = false;
     activeLocations.clear();
+    serverCheckedLocations.clear();
     randoOptions.clear();
     while (!receivedItems.empty()) {
         receivedItems.pop();
@@ -284,6 +291,8 @@ void Client::Poll() {
     if (client != nullptr) {
         client->poll();
     }
+    ApplyServerCheckedLocations();
+    RepairInvalidInventoryState();
     ProcessItemQueue();
 }
 
@@ -325,6 +334,38 @@ void Client::SyncCompletedChecks() {
     if (!locations.empty()) {
         client->LocationChecks(locations);
     }
+}
+
+void Client::RecordCheckedLocations(const std::list<int64_t>& locations) {
+    for (const int64_t location : locations) {
+        const int64_t rawCheckId = location - LocationIdBase;
+        if (rawCheckId > RC_UNKNOWN && rawCheckId < RC_MAX && activeLocations.contains(rawCheckId)) {
+            serverCheckedLocations.insert(static_cast<RandoCheckId>(rawCheckId));
+        }
+    }
+    ApplyServerCheckedLocations();
+}
+
+void Client::ApplyServerCheckedLocations() {
+    if (!IS_ARCHIPELAGO) {
+        return;
+    }
+    for (const RandoCheckId checkId : serverCheckedLocations) {
+        RandoSaveCheck& saveCheck = RANDO_SAVE_CHECKS[checkId];
+        saveCheck.obtained = true;
+        saveCheck.cycleObtained = true;
+        saveCheck.eligible = false;
+    }
+}
+
+void Client::RepairInvalidInventoryState() {
+    if (!IS_ARCHIPELAGO || CUR_UPG_VALUE(UPG_BOMB_BAG) != 0) {
+        return;
+    }
+    if (INV_CONTENT(ITEM_BOMB) == ITEM_BOMB) {
+        INV_CONTENT(ITEM_BOMB) = ITEM_NONE;
+    }
+    AMMO(ITEM_BOMB) = 0;
 }
 
 void Client::PrepareRandomizerSettings() {
@@ -388,6 +429,8 @@ bool Client::InitializeSave() {
         RANDO_SAVE_OPTIONS[optionId] = static_cast<uint32_t>(CVarGetInteger(option.cvar, option.defaultValue));
     }
     RANDO_SAVE_OPTIONS[RO_LOGIC] = RO_LOGIC_NO_LOGIC;
+    gSaveContext.save.saveInfo.playerData.healthCapacity = gSaveContext.save.saveInfo.playerData.health =
+        static_cast<int16_t>(RANDO_SAVE_OPTIONS[RO_STARTING_HEALTH] * 0x10);
     gSaveContext.save.shipSaveInfo.rando.finalSeed =
         static_cast<uint32_t>(std::hash<std::string>{}(client->get_seed()));
     snprintf(gSaveContext.save.shipSaveInfo.rando.archipelagoServer,
@@ -418,6 +461,7 @@ bool Client::InitializeSave() {
         activeLocations.contains(RC_STARTING_ITEM_DEKU_MASK);
     RANDO_SAVE_CHECKS[RC_STARTING_ITEM_SONG_OF_HEALING].shuffled =
         activeLocations.contains(RC_STARTING_ITEM_SONG_OF_HEALING);
+    ApplyServerCheckedLocations();
     return true;
 }
 

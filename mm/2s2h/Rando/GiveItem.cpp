@@ -142,6 +142,12 @@ void Rando::GiveItem(RandoItemId randoItemId) {
             INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
             AMMO(ITEM_BOMB) = AMMO(ITEM_BOMBCHU) = CUR_CAPACITY(UPG_BOMB_BAG);
             break;
+        case RI_BOMBS_5:
+        case RI_BOMBS_10:
+            if (CUR_UPG_VALUE(UPG_BOMB_BAG) != 0) {
+                Item_Give(gPlayState, Rando::StaticData::Items[randoItemId].itemId);
+            }
+            break;
         case RI_WALLET_ADULT:
         case RI_WALLET_GIANT:
             Item_Give(gPlayState, Rando::StaticData::Items[randoItemId].itemId);

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <list>
 #include <memory>
 #include <queue>
 #include <string>
@@ -122,6 +123,9 @@ class Client {
     Client() = default;
     void ConfigureHandlers();
     void SyncCompletedChecks();
+    void RecordCheckedLocations(const std::list<int64_t>& locations);
+    void ApplyServerCheckedLocations();
+    void RepairInvalidInventoryState();
     void PrepareRandomizerSettings();
     void ProcessItemQueue();
     void QueueReceivedItemPresentation(const ReceivedItem& item);
@@ -137,6 +141,7 @@ class Client {
     std::unique_ptr<APClient> client;
     std::queue<ReceivedItem> receivedItems;
     std::unordered_set<int32_t> activeLocations;
+    std::unordered_set<RandoCheckId> serverCheckedLocations;
     std::unordered_map<std::string, int32_t> randoOptions;
     ConnectionStatus status = ConnectionStatus::Disconnected;
     bool goalSent = false;

@@ -2,6 +2,7 @@
 #include "2s2h/Enhancements/FrameInterpolation/FrameInterpolation.h"
 #include "2s2h/ShipInit.hpp"
 #include "2s2h/Rando/DrawFuncs.h"
+#include "2s2h/Network/Archipelago/Archipelago.h"
 #include "2s2h_assets.h"
 
 extern "C" {
@@ -535,6 +536,15 @@ void Rando::DrawArchipelagoItem(unsigned int flags) {
 }
 
 void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* actor) {
+    if (randoCheckId != RC_UNKNOWN) {
+        const Archipelago::ScoutedLocation* location =
+            Archipelago::Client::Instance().GetScoutedLocation(randoCheckId);
+        if (location != nullptr && !location->isLocal) {
+            Rando::DrawArchipelagoItem(location->flags);
+            return;
+        }
+    }
+
     // Apply hilites with actor world pos before drawing
     if (actor != NULL) {
         func_800B8118(actor, gPlayState, 0);
