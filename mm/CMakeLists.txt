@@ -200,6 +200,8 @@ if(BUILD_ARCHIPELAGO AND NOT CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch|CafeOS|An
         GIT_TAG 0.8.2
         # Header-only dependency; avoid its pre-CMake-3.5 project on CMake 4.
         SOURCE_SUBDIR _header_only
+        PATCH_COMMAND ${CMAKE_COMMAND} -Dsource_dir=<SOURCE_DIR>
+                      -P ${CMAKE_SOURCE_DIR}/CMake/PatchWebsocketppCxx20.cmake
     )
     FetchContent_Declare(
         wswrap
@@ -672,6 +674,14 @@ endif()
 
 find_program(CURL NAMES curl DOC "Path to the curl program.  Used to download files.")
 execute_process(COMMAND ${CURL} -sSfL https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt -o ${CMAKE_BINARY_DIR}/gamecontrollerdb.txt OUTPUT_VARIABLE RESULT)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/networking)
+execute_process(
+    COMMAND ${CURL} -sSfL https://curl.se/ca/cacert.pem -o ${CMAKE_BINARY_DIR}/networking/cacert.pem
+    RESULT_VARIABLE CACERT_RESULT
+)
+if(NOT CACERT_RESULT EQUAL 0)
+    message(FATAL_ERROR "Unable to download the CA certificate bundle")
+endif()
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
 configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/macosx/Info.plist.in ${CMAKE_BINARY_DIR}/macosx/Info.plist @ONLY)
@@ -680,6 +690,7 @@ INSTALL(FILES ${CMAKE_BINARY_DIR}/gamecontrollerdb.txt DESTINATION ../MacOS COMP
 INSTALL(FILES ${CMAKE_BINARY_DIR}/mm/2ship.o2r DESTINATION ../Resources COMPONENT 2s2h)
 elseif(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "NintendoSwitch|CafeOS")
 INSTALL(FILES ${CMAKE_BINARY_DIR}/gamecontrollerdb.txt DESTINATION . COMPONENT 2s2h)
+INSTALL(FILES ${CMAKE_BINARY_DIR}/networking/cacert.pem DESTINATION networking COMPONENT 2s2h)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch|CafeOS")
