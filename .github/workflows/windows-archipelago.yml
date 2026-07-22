@@ -1,0 +1,112 @@
+name: Windows Archipelago Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-2ship-otr:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $(cat .github/workflows/apt-deps.txt) libzip-dev zipcmp zipmerge ziptool
+      - name: Install tinyxml2
+        run: |
+          wget https://github.com/leethomason/tinyxml2/archive/refs/tags/10.0.0.tar.gz
+          tar -xzf 10.0.0.tar.gz
+          cmake -S tinyxml2-10.0.0 -B tinyxml2-build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build tinyxml2-build
+          sudo cmake --install tinyxml2-build
+      - name: Generate 2ship.o2r
+        run: |
+          cmake --no-warn-unused-cli -S . -B build-otr -G Ninja -DCMAKE_BUILD_TYPE:STRING=Release
+          cmake --build build-otr --config Release --target Generate2ShipOtr --parallel 3
+      - name: Upload 2ship.o2r
+        uses: actions/upload-artifact@v7
+        with:
+          name: 2ship.o2r
+          path: 2ship.o2r
+          retention-days: 3
+
+  build-windows:
+    needs: generate-2ship-otr
+    runs-on: windows-latest
+    steps:
+      - name: Install Ninja
+        run: |
+          choco install ninja -y
+          Remove-Item -Path "C:\ProgramData\Chocolatey\bin\ccache.exe" -Force -ErrorAction SilentlyContinue
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Configure sccache
+        uses: hendrikmuhs/ccache-action@v1.2.22
+        with:
+          variant: sccache
+          max-size: 2G
+          key: windows-archipelago-${{ github.ref }}
+      - name: Restore vcpkg cache
+        id: restore-vcpkg
+        uses: actions/cache/restore@v5
+        with:
+          path: vcpkg
+          key: windows-vcpkg-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            windows-vcpkg-${{ github.ref }}-
+            windows-vcpkg-
+      - name: Configure MSVC x64
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Download 2ship.o2r
+        uses: actions/download-artifact@v8
+        with:
+          name: 2ship.o2r
+          path: build-windows/mm
+      - name: Default new Windows installs to OpenGL
+        run: >-
+          cmake
+          -Dsource_file="${{ github.workspace }}/libultraship/src/ship/config/Config.cpp"
+          -P CMake/DefaultWindowsOpenGL.cmake
+      - name: Build and package
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+          VCPKG_DEFAULT_TRIPLET: x64-windows
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake -S . -B build-windows -G Ninja -DCMAKE_MAKE_PROGRAM=ninja -DCMAKE_BUILD_TYPE:STRING=Release -DOPENSSL_RUNTIME_DIR="C:/Program Files/OpenSSL/bin" -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          cmake --build build-windows --config Release --parallel 10
+          Copy-Item "C:\Program Files\OpenSSL\bin\libssl-3-x64.dll" build-windows\mm
+          Copy-Item "C:\Program Files\OpenSSL\bin\libcrypto-3-x64.dll" build-windows\mm
+          cd build-windows
+          cpack
+          cd ..
+          Move-Item _packages\*.zip _packages\2ship-archipelago-windows-x64.zip
+          Expand-Archive -Path _packages\2ship-archipelago-windows-x64.zip -DestinationPath 2ship-archipelago-windows-x64
+          $ssl = Get-ChildItem 2ship-archipelago-windows-x64 -Filter "libssl*.dll"
+          $crypto = Get-ChildItem 2ship-archipelago-windows-x64 -Filter "libcrypto*.dll"
+          if (-not $ssl -or -not $crypto) {
+            throw "The Windows package is missing required OpenSSL runtime DLLs."
+          }
+      - name: Upload Windows x64 package
+        uses: actions/upload-artifact@v7
+        with:
+          name: 2ship-archipelago-windows-x64
+          path: 2ship-archipelago-windows-x64
+          retention-days: 7
+      - name: Save vcpkg cache
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: vcpkg
+          key: ${{ steps.restore-vcpkg.outputs.cache-primary-key }}

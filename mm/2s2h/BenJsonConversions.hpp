@@ -3,6 +3,8 @@
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
+#include <cstdio>
+#include <string>
 #include "build.h"
 
 extern "C" {
@@ -58,6 +60,9 @@ inline void to_json(json& j, const RandoSaveInfo& rando) {
         { "randoStartingItems", rando.randoStartingItems },
         { "foundDungeonKeys", rando.foundDungeonKeys },
         { "foundTriforcePieces", rando.foundTriforcePieces },
+        { "archipelagoServer", std::string(rando.archipelagoServer) },
+        { "archipelagoSlot", std::string(rando.archipelagoSlot) },
+        { "archipelagoSeed", std::string(rando.archipelagoSeed) },
     };
 }
 
@@ -70,6 +75,12 @@ inline void from_json(const json& j, RandoSaveInfo& rando) {
     j.at("randoStartingItems").get_to(rando.randoStartingItems);
     j.at("foundDungeonKeys").get_to(rando.foundDungeonKeys);
     j.at("foundTriforcePieces").get_to(rando.foundTriforcePieces);
+    const std::string archipelagoServer = j.value("archipelagoServer", std::string());
+    const std::string archipelagoSlot = j.value("archipelagoSlot", std::string());
+    const std::string archipelagoSeed = j.value("archipelagoSeed", std::string());
+    snprintf(rando.archipelagoServer, sizeof(rando.archipelagoServer), "%s", archipelagoServer.c_str());
+    snprintf(rando.archipelagoSlot, sizeof(rando.archipelagoSlot), "%s", archipelagoSlot.c_str());
+    snprintf(rando.archipelagoSeed, sizeof(rando.archipelagoSeed), "%s", archipelagoSeed.c_str());
 }
 
 inline void to_json(json& j, const Vec3f& vec) {
@@ -127,7 +138,7 @@ inline void to_json(json& j, const ShipSaveInfo& shipSaveInfo) {
         { "commitHash", commitHash },
     };
 
-    if (shipSaveInfo.saveType == SAVETYPE_RANDO) {
+    if (shipSaveInfo.saveType == SAVETYPE_RANDO || shipSaveInfo.saveType == SAVETYPE_ARCHIPELAGO) {
         j["rando"] = shipSaveInfo.rando;
     }
 }
@@ -142,7 +153,7 @@ inline void from_json(const json& j, ShipSaveInfo& shipSaveInfo) {
     j.at("respawn").get_to(shipSaveInfo.respawn);
     j.at("commitHash").get_to(shipSaveInfo.commitHash);
 
-    if (shipSaveInfo.saveType == SAVETYPE_RANDO) {
+    if (shipSaveInfo.saveType == SAVETYPE_RANDO || shipSaveInfo.saveType == SAVETYPE_ARCHIPELAGO) {
         if (strcmp(shipSaveInfo.commitHash, gGitCommitHash) != 0) {
             SPDLOG_ERROR("Randomizer saves cannot be loaded from a different version.");
             throw new std::runtime_error("Randomizer saves cannot be loaded from a different version.");

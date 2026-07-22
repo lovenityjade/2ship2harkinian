@@ -5,6 +5,8 @@
  */
 
 #include "z_door_shutter.h"
+
+s32 Rando_HasSkeletonKey(void);
 #include "z64quake.h"
 #include "z64rumble.h"
 #include "objects/gameplay_keep/gameplay_keep.h"
@@ -346,7 +348,7 @@ void func_808A1090(DoorShutter* this, PlayState* play) {
         this->slidingDoor.dyna.actor.velocity.y = 0.0f;
         if (this->unk_166 != 0) {
             Flags_SetSwitch(play, DOORSHUTTER_GET_SWITCH_FLAG(&this->slidingDoor.dyna.actor));
-            if (this->doorType != DOORSHUTTER_TYPE_BOSS_DOOR) {
+            if ((this->doorType != DOORSHUTTER_TYPE_BOSS_DOOR) && !Rando_HasSkeletonKey()) {
                 DUNGEON_KEY_COUNT(gSaveContext.mapIndex) = DUNGEON_KEY_COUNT(gSaveContext.mapIndex) - 1;
                 Actor_PlaySfx(&this->slidingDoor.dyna.actor, NA_SE_EV_CHAIN_KEY_UNLOCK);
             } else {
@@ -384,7 +386,7 @@ void func_808A1090(DoorShutter* this, PlayState* play) {
                         this->slidingDoor.dyna.actor.textId = 0x1803;
                     }
                     player->doorTimer += 10;
-                } else if (DUNGEON_KEY_COUNT(gSaveContext.mapIndex) <= 0) {
+                } else if ((DUNGEON_KEY_COUNT(gSaveContext.mapIndex) <= 0) && !Rando_HasSkeletonKey()) {
                     player->doorType = PLAYER_DOORTYPE_TALKING;
                     this->slidingDoor.dyna.actor.textId = 0x1802;
                 } else {

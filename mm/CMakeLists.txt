@@ -178,6 +178,60 @@ set(ALL_FILES
 ################################################################################
 add_executable(${PROJECT_NAME} ${ALL_FILES})
 
+option(BUILD_ARCHIPELAGO "Build the native Archipelago client" ON)
+
+if(BUILD_ARCHIPELAGO AND NOT CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch|CafeOS|Android|iOS")
+    include(FetchContent)
+    add_compile_definitions(ASIO_STANDALONE ENABLE_ARCHIPELAGO)
+
+    FetchContent_Declare(
+        valijson
+        GIT_REPOSITORY https://github.com/tristanpenman/valijson.git
+        GIT_TAG v1.0.6
+    )
+    FetchContent_Declare(
+        asio
+        GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+        GIT_TAG asio-1-30-2
+    )
+    FetchContent_Declare(
+        websocketpp
+        GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
+        GIT_TAG 0.8.2
+        # Header-only dependency; avoid its pre-CMake-3.5 project on CMake 4.
+        SOURCE_SUBDIR _header_only
+        PATCH_COMMAND ${CMAKE_COMMAND} -Dsource_dir=<SOURCE_DIR>
+                      -P ${CMAKE_SOURCE_DIR}/CMake/PatchWebsocketppCxx20.cmake
+    )
+    FetchContent_Declare(
+        wswrap
+        GIT_REPOSITORY https://github.com/black-sliver/wswrap.git
+        GIT_TAG d0505e0ec53a26743f11051949a0dc66bcf44951
+    )
+    FetchContent_Declare(
+        apclientpp
+        GIT_REPOSITORY https://github.com/black-sliver/apclientpp.git
+        GIT_TAG 7f33a3849887983378258c2fe8fc3887f687c430
+    )
+
+    set(APCLIENTPP_BUILD_TESTING OFF CACHE BOOL "Do not build apclientpp tests" FORCE)
+    FetchContent_MakeAvailable(valijson asio websocketpp wswrap apclientpp)
+    find_package(OpenSSL REQUIRED)
+
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${asio_SOURCE_DIR}/asio/include
+        ${valijson_SOURCE_DIR}/include
+        ${websocketpp_SOURCE_DIR}
+        ${wswrap_SOURCE_DIR}/include
+        ${apclientpp_SOURCE_DIR}
+    )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _WEBSOCKETPP_CPP11_STL_)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+    if(WIN32)
+        target_link_libraries(${PROJECT_NAME} PRIVATE Crypt32)
+    endif()
+endif()
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
 endif()
@@ -264,6 +318,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 		STORMLIB_NO_AUTO_LINK
 		"_CRT_SECURE_NO_WARNINGS;"
 		NOMINMAX
+		WIN32_LEAN_AND_MEAN
 	)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
 	target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -599,7 +654,16 @@ else()
 
 endif()
 
-if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin|NintendoSwitch|CafeOS")
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+INSTALL(TARGETS 2ship
+    RUNTIME_DEPENDENCIES
+        DIRECTORIES "${OPENSSL_RUNTIME_DIR}"
+        PRE_EXCLUDE_REGEXES "api-ms-.*" "ext-ms-.*"
+        POST_EXCLUDE_REGEXES ".*[\\\\/]system32[\\\\/].*"
+    DESTINATION .
+    COMPONENT 2s2h
+)
+elseif(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin|NintendoSwitch|CafeOS")
 INSTALL(TARGETS 2ship DESTINATION . COMPONENT 2s2h)
 endif()
 
@@ -610,6 +674,14 @@ endif()
 
 find_program(CURL NAMES curl DOC "Path to the curl program.  Used to download files.")
 execute_process(COMMAND ${CURL} -sSfL https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt -o ${CMAKE_BINARY_DIR}/gamecontrollerdb.txt OUTPUT_VARIABLE RESULT)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/networking)
+execute_process(
+    COMMAND ${CURL} -sSfL https://curl.se/ca/cacert.pem -o ${CMAKE_BINARY_DIR}/networking/cacert.pem
+    RESULT_VARIABLE CACERT_RESULT
+)
+if(NOT CACERT_RESULT EQUAL 0)
+    message(FATAL_ERROR "Unable to download the CA certificate bundle")
+endif()
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
 configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/macosx/Info.plist.in ${CMAKE_BINARY_DIR}/macosx/Info.plist @ONLY)
@@ -618,6 +690,7 @@ INSTALL(FILES ${CMAKE_BINARY_DIR}/gamecontrollerdb.txt DESTINATION ../MacOS COMP
 INSTALL(FILES ${CMAKE_BINARY_DIR}/mm/2ship.o2r DESTINATION ../Resources COMPONENT 2s2h)
 elseif(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "NintendoSwitch|CafeOS")
 INSTALL(FILES ${CMAKE_BINARY_DIR}/gamecontrollerdb.txt DESTINATION . COMPONENT 2s2h)
+INSTALL(FILES ${CMAKE_BINARY_DIR}/networking/cacert.pem DESTINATION networking COMPONENT 2s2h)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch|CafeOS")

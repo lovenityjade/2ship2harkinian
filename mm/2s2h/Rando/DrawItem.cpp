@@ -2,6 +2,7 @@
 #include "2s2h/Enhancements/FrameInterpolation/FrameInterpolation.h"
 #include "2s2h/ShipInit.hpp"
 #include "2s2h/Rando/DrawFuncs.h"
+#include "2s2h/Network/Archipelago/Archipelago.h"
 #include "2s2h_assets.h"
 
 extern "C" {
@@ -491,7 +492,59 @@ void DrawTycoonWallet() {
     CLOSE_DISPS(gPlayState->state.gfxCtx);
 }
 
+static void DrawMysteryItemImpl() {
+    OPEN_DISPS(gPlayState->state.gfxCtx);
+    Gfx_SetupDL25_Opa(gPlayState->state.gfxCtx);
+    Matrix_Scale(0.035f, 0.035f, 0.035f, MTXMODE_APPLY);
+    MATRIX_FINALIZE_AND_LOAD(POLY_OPA_DISP++, gPlayState->state.gfxCtx);
+    gSPDisplayList(POLY_OPA_DISP++, ResourceMgr_LoadGfxByName("objects/object_mystery_item/gMysteryItemDL"));
+    CLOSE_DISPS(gPlayState->state.gfxCtx);
+}
+
+static void DrawArchipelagoItemImpl(unsigned int flags) {
+    const char* model = "objects/object_archipelago_item/gArchipelagoJunkDL";
+    if (flags & 0x5) {
+        model = "objects/object_archipelago_item/gArchipelagoProgressiveDL";
+    } else if (flags & 0x2) {
+        model = "objects/object_archipelago_item/gArchipelagoItemDL";
+    }
+
+    OPEN_DISPS(gPlayState->state.gfxCtx);
+    Gfx_SetupDL25_Opa(gPlayState->state.gfxCtx);
+    Matrix_Scale(0.035f, 0.035f, 0.035f, MTXMODE_APPLY);
+    MATRIX_FINALIZE_AND_LOAD(POLY_OPA_DISP++, gPlayState->state.gfxCtx);
+    gSPDisplayList(POLY_OPA_DISP++, ResourceMgr_LoadGfxByName(model));
+    CLOSE_DISPS(gPlayState->state.gfxCtx);
+}
+
+static void DrawSkeletonKey() {
+    OPEN_DISPS(gPlayState->state.gfxCtx);
+
+    Gfx_SetupDL25_Opa(gPlayState->state.gfxCtx);
+    gDPSetEnvColor(POLY_OPA_DISP++, 255, 255, 170, 255);
+    gSPDisplayList(POLY_OPA_DISP++, ResourceMgr_LoadGfxByName("objects/object_key/gSkeletonKeyDL"));
+
+    CLOSE_DISPS(gPlayState->state.gfxCtx);
+}
+
+void Rando::DrawMysteryItem() {
+    DrawMysteryItemImpl();
+}
+
+void Rando::DrawArchipelagoItem(unsigned int flags) {
+    DrawArchipelagoItemImpl(flags);
+}
+
 void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* actor) {
+    if (randoCheckId != RC_UNKNOWN) {
+        const Archipelago::ScoutedLocation* location =
+            Archipelago::Client::Instance().GetScoutedLocation(randoCheckId);
+        if (location != nullptr && !location->isLocal) {
+            Rando::DrawArchipelagoItem(location->flags);
+            return;
+        }
+    }
+
     // Apply hilites with actor world pos before drawing
     if (actor != NULL) {
         func_800B8118(actor, gPlayState, 0);
@@ -507,6 +560,9 @@ void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* 
         case RI_STONE_TOWER_SMALL_KEY:
         case RI_WOODFALL_SMALL_KEY:
             DrawSmallKey(randoItemId);
+            break;
+        case RI_SKELETON_KEY:
+            DrawSkeletonKey();
             break;
         case RI_GREAT_BAY_BOSS_KEY:
         case RI_SNOWHEAD_BOSS_KEY:

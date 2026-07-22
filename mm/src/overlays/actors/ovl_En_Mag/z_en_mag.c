@@ -8,6 +8,11 @@
 #include "objects/object_mag/object_mag.h"
 #include "BenPort.h"
 
+#ifdef ENABLE_ARCHIPELAGO
+#define dgTitleArchipelagoSubtitleTex "__OTR__objects/object_mag/gTitleArchipelagoSubtitleTex"
+static const ALIGN_ASSET(2) char gTitleArchipelagoSubtitleTex[] = dgTitleArchipelagoSubtitleTex;
+#endif
+
 #define FLAGS (ACTOR_FLAG_UPDATE_CULLING_DISABLED | ACTOR_FLAG_DRAW_CULLING_DISABLED)
 
 void EnMag_Init(Actor* thisx, PlayState* play);
@@ -674,6 +679,11 @@ void EnMag_DrawCharTexture(Gfx** gfxP, TexturePtr texture, s32 rectLeft, s32 rec
 #define SUBTITLE_TEX_LEFT 151
 #define SUBTITLE_TEX_TOP 124
 
+#define ARCHIPELAGO_SUBTITLE_TEX_WIDTH 128
+#define ARCHIPELAGO_SUBTITLE_TEX_HEIGHT 32
+#define ARCHIPELAGO_SUBTITLE_TEX_CENTER_X 177
+#define ARCHIPELAGO_SUBTITLE_TEX_CENTER_Y 151
+
 #define THE_LEGEND_OF_TEX_WIDTH 72
 #define THE_LEGEND_OF_TEX_HEIGHT 8
 #define THE_LEGEND_OF_TEX_LEFT 158
@@ -839,6 +849,19 @@ void EnMag_DrawInner(Actor* thisx, PlayState* play, Gfx** gfxP) {
 
     EnMag_DrawTextureI8(&gfx, gTitleScreenMajorasMaskSubtitleTex, SUBTITLE_TEX_WIDTH, SUBTITLE_TEX_HEIGHT,
                         SUBTITLE_TEX_LEFT, SUBTITLE_TEX_TOP);
+
+#ifdef ENABLE_ARCHIPELAGO
+    if (this->subtitleAlpha != 0) {
+        Gfx_SetupDL39_Ptr(&gfx);
+        gDPSetAlphaCompare(gfx++, G_AC_NONE);
+        gDPSetCombineMode(gfx++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+        gDPSetRenderMode(gfx++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+        gDPSetPrimColor(gfx++, 0, 0, 255, 255, 255, this->subtitleAlpha);
+        EnMag_DrawImageRGBA32(&gfx, ARCHIPELAGO_SUBTITLE_TEX_CENTER_X, ARCHIPELAGO_SUBTITLE_TEX_CENTER_Y,
+                              gTitleArchipelagoSubtitleTex, ARCHIPELAGO_SUBTITLE_TEX_WIDTH,
+                              ARCHIPELAGO_SUBTITLE_TEX_HEIGHT);
+    }
+#endif
 
     Gfx_SetupDL39_Ptr(&gfx);
 

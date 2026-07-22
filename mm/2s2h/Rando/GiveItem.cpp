@@ -10,6 +10,9 @@ extern "C" {
 
 void Rando::GiveItem(RandoItemId randoItemId) {
     switch (randoItemId) {
+        case RI_SKELETON_KEY:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_SKELETON_KEY);
+            break;
         case RI_CLOCK_TOWN_STRAY_FAIRY:
             SET_WEEKEVENTREG(WEEKEVENTREG_08_80);
             break;
@@ -138,6 +141,12 @@ void Rando::GiveItem(RandoItemId randoItemId) {
             Item_Give(gPlayState, Rando::StaticData::Items[randoItemId].itemId);
             INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
             AMMO(ITEM_BOMB) = AMMO(ITEM_BOMBCHU) = CUR_CAPACITY(UPG_BOMB_BAG);
+            break;
+        case RI_BOMBS_5:
+        case RI_BOMBS_10:
+            if (CUR_UPG_VALUE(UPG_BOMB_BAG) != 0) {
+                Item_Give(gPlayState, Rando::StaticData::Items[randoItemId].itemId);
+            }
             break;
         case RI_WALLET_ADULT:
         case RI_WALLET_GIANT:

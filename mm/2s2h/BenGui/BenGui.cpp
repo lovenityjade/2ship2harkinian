@@ -10,6 +10,7 @@
 #include "CosmeticEditor.h"
 #include "Notification.h"
 #include "2s2h/Rando/CheckTracker/CheckTracker.h"
+#include "2s2h/Network/Archipelago/Archipelago.h"
 
 #ifdef __APPLE__
 #include <fast/backends/gfx_metal.h>
@@ -69,6 +70,9 @@ std::shared_ptr<TimesplitsSettingsWindow> mTimesplitsSettingsWindow;
 std::shared_ptr<InputViewer> mInputViewer;
 std::shared_ptr<InputViewerSettingsWindow> mInputViewerSettings;
 std::shared_ptr<BenModalWindow> mModalWindow;
+std::shared_ptr<Archipelago::ConsoleWindow> mArchipelagoConsoleWindow;
+std::shared_ptr<Archipelago::HintWindow> mArchipelagoHintWindow;
+std::shared_ptr<Archipelago::StatusWindow> mArchipelagoStatusWindow;
 
 UIWidgets::Colors GetMenuThemeColor() {
     return mBenMenu->GetMenuThemeColor();
@@ -169,6 +173,17 @@ void SetupGuiElements() {
     gui->AddGuiWindow(mNotificationWindow);
     mNotificationWindow->Show();
 
+    mArchipelagoConsoleWindow = std::make_shared<Archipelago::ConsoleWindow>(
+        "gWindows.ArchipelagoConsole", "Archipelago Console", ImVec2(720, 520));
+    gui->AddGuiWindow(mArchipelagoConsoleWindow);
+    mArchipelagoHintWindow = std::make_shared<Archipelago::HintWindow>(
+        "gWindows.ArchipelagoHints", "Archipelago Hints", ImVec2(900, 500));
+    gui->AddGuiWindow(mArchipelagoHintWindow);
+    mArchipelagoStatusWindow = std::make_shared<Archipelago::StatusWindow>(
+        "gWindows.ArchipelagoStatus", "Archipelago Connection Status");
+    gui->AddGuiWindow(mArchipelagoStatusWindow);
+    mArchipelagoStatusWindow->Show();
+
     mRandoCheckTrackerWindow = std::make_shared<Rando::CheckTracker::CheckTrackerWindow>(
         "gWindows.CheckTracker", "Check Tracker", ImVec2(375, 460));
     gui->AddGuiWindow(mRandoCheckTrackerWindow);
@@ -200,6 +215,9 @@ void Destroy() {
     mNotificationWindow = nullptr;
     mRandoCheckTrackerWindow = nullptr;
     mRandoCheckTrackerSettingsWindow = nullptr;
+    mArchipelagoConsoleWindow = nullptr;
+    mArchipelagoHintWindow = nullptr;
+    mArchipelagoStatusWindow = nullptr;
 
     mHookDebuggerWindow = nullptr;
     mSaveEditorWindow = nullptr;

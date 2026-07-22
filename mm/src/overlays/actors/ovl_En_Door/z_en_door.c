@@ -6,6 +6,8 @@
 
 #include "z_en_door.h"
 
+s32 Rando_HasSkeletonKey(void);
+
 #include "libc/assert.h"
 
 #include "objects/object_kinsta2_obj/object_kinsta2_obj.h"
@@ -704,7 +706,9 @@ void EnDoor_Idle(EnDoor* this, PlayState* play) {
 
         // If this is a locked door then handle small key counts, sfx and switch flag
         if (this->lockTimer != 0) {
-            DUNGEON_KEY_COUNT(gSaveContext.mapIndex) = DUNGEON_KEY_COUNT(gSaveContext.mapIndex) - 1;
+            if (!Rando_HasSkeletonKey()) {
+                DUNGEON_KEY_COUNT(gSaveContext.mapIndex) = DUNGEON_KEY_COUNT(gSaveContext.mapIndex) - 1;
+            }
             Flags_SetSwitch(play, this->typeVar.switchFlag);
             Actor_PlaySfx(&this->knobDoor.dyna.actor, NA_SE_EV_CHAIN_KEY_UNLOCK);
         }
@@ -733,7 +737,7 @@ void EnDoor_Idle(EnDoor* this, PlayState* play) {
                 player->doorActor = &this->knobDoor.dyna.actor;
 
                 if (this->lockTimer != 0) {
-                    if (DUNGEON_KEY_COUNT(gSaveContext.mapIndex) <= 0) {
+                    if ((DUNGEON_KEY_COUNT(gSaveContext.mapIndex) <= 0) && !Rando_HasSkeletonKey()) {
                         player->doorType = PLAYER_DOORTYPE_TALKING;
                         // 0x1802: "Missing small key"
                         this->knobDoor.dyna.actor.textId = 0x1802;

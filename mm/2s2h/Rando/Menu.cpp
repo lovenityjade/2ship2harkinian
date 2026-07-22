@@ -2,6 +2,7 @@
 #include "Rando/Spoiler/Spoiler.h"
 #include "2s2h/BenGui/UIWidgets.hpp"
 #include "Rando/CheckTracker/CheckTracker.h"
+#include "2s2h/Network/Archipelago/Archipelago.h"
 #include "Rando/MiscBehavior/ClockShuffle.h"
 #include "build.h"
 #include "2s2h/BenGui/BenMenu.h"
@@ -292,7 +293,44 @@ static void DrawGeneralTab() {
     ImGui::PopStyleColor();
 
     ImGui::SeparatorText("Seed Generation");
-    UIWidgets::CVarCheckbox("Enable Rando (Randomizes new files upon creation)", "gRando.Enabled");
+    ImGui::TextUnformatted("Run Type");
+    if (!CVarGetInteger("gRando.Enabled", 0)) {
+        CVarSetInteger("gRando.Enabled", 1);
+        Ship::Context::GetInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
+    }
+    bool runModeChanged = UIWidgets::CVarRadioButton(
+        "Rando", "gRando.Mode", RANDO_RUN_MODE_LOCAL,
+        RadioButtonsOptions().Tooltip("Generate and play a local 2Ship randomizer seed."));
+    ImGui::SameLine();
+    runModeChanged |= UIWidgets::CVarRadioButton(
+        "Archipelago", "gRando.Mode", RANDO_RUN_MODE_ARCHIPELAGO,
+        RadioButtonsOptions().Tooltip("Use the connected Archipelago room instead of local item placement."));
+    if (runModeChanged) {
+        CVarSetInteger("gRando.Enabled", 1);
+        Ship::Context::GetInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
+    }
+
+    if (CVarGetInteger("gRando.Mode", RANDO_RUN_MODE_LOCAL) == RANDO_RUN_MODE_ARCHIPELAGO) {
+        const Archipelago::ConnectionStatus connectionStatus = Archipelago::Client::Instance().GetStatus();
+        const char* statusText = "Disconnected";
+        ImVec4 statusColor(0.75f, 0.75f, 0.75f, 1.0f);
+        if (Archipelago::Client::Instance().IsReady()) {
+            statusText = "Connected";
+            statusColor = ImVec4(0.45f, 1.0f, 0.55f, 1.0f);
+        } else if (connectionStatus == Archipelago::ConnectionStatus::Connected) {
+            statusText = "Synchronizing slot data...";
+            statusColor = ImVec4(1.0f, 0.85f, 0.35f, 1.0f);
+        } else if (connectionStatus == Archipelago::ConnectionStatus::Connecting) {
+            statusText = "Connecting...";
+            statusColor = ImVec4(1.0f, 0.85f, 0.35f, 1.0f);
+        } else if (connectionStatus == Archipelago::ConnectionStatus::Error) {
+            statusText = "Connection error";
+            statusColor = ImVec4(1.0f, 0.45f, 0.45f, 1.0f);
+        }
+        ImGui::TextColored(statusColor, "%s", statusText);
+        ImGui::EndChild();
+        return;
+    }
 
     if (UIWidgets::CVarCombobox("Seed", "gRando.SpoilerFileIndex", Rando::Spoiler::spoilerOptions)) {
         if (CVarGetInteger("gRando.SpoilerFileIndex", 0) == 0) {
@@ -540,6 +578,12 @@ static void DrawShufflesTab() {
     CVarCheckbox("Shuffle Hive Drops", "gPlaceholderBool",
                  CheckboxOptions({ { .disabled = true, .disabledTooltip = "Coming Soon" } }));
     CVarCheckbox("Shuffle Freestanding Items", Rando::StaticData::Options[RO_SHUFFLE_FREESTANDING_ITEMS].cvar);
+    CVarCheckbox(
+        "Mystery Freestanding Items", "gRando.MysteryFreestandingItems",
+        CheckboxOptions({ { .tooltip = "Replaces shuffled freestanding item models with a mystery question mark.",
+                            .disabled = !CVarGetInteger(
+                                Rando::StaticData::Options[RO_SHUFFLE_FREESTANDING_ITEMS].cvar, 0),
+                            .disabledTooltip = "Requires Shuffle Freestanding Items" } }));
     CVarCheckbox("Shuffle Wonder Items", "gPlaceholderBool",
                  CheckboxOptions({ { .disabled = true, .disabledTooltip = "Coming Soon" } }));
     ImGui::EndChild();
@@ -1167,6 +1211,17 @@ void Rando::RegisterMenu() {
     mBenMenu->AddSidebarEntry("Rando", "General", 1);
     WidgetPath path = { "Rando", "General", SECTION_COLUMN_1 };
     mBenMenu->AddWidget(path, "General", WIDGET_CUSTOM).CustomFunction([](WidgetInfo& info) { DrawGeneralTab(); });
+    mBenMenu->AddSidebarEntry("Rando", "Archipelago", 1);
+    path.sidebarName = "Archipelago";
+    mBenMenu->AddWidget(path, "Archipelago", WIDGET_CUSTOM).CustomFunction([](WidgetInfo& info) {
+        Archipelago::Client::Instance().DrawMenu();
+    });
+    mBenMenu->AddWidget(path, "Popout Archipelago Console", WIDGET_WINDOW_BUTTON)
+        .CVar("gWindows.ArchipelagoConsole")
+        .WindowName("Archipelago Console");
+    mBenMenu->AddWidget(path, "Popout Archipelago Hints", WIDGET_WINDOW_BUTTON)
+        .CVar("gWindows.ArchipelagoHints")
+        .WindowName("Archipelago Hints");
     mBenMenu->AddSidebarEntry("Rando", "Logic/Conditions", 1);
     path.sidebarName = "Logic/Conditions";
     mBenMenu->AddWidget(path, "Logic/Conditions", WIDGET_CUSTOM).CustomFunction([](WidgetInfo& info) {

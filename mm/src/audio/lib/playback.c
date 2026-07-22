@@ -196,14 +196,10 @@ void AudioPlayback_ProcessNotes(void) {
         sampleState = &gAudioCtx.sampleStateList[gAudioCtx.sampleStateOffset + i];
         playbackState = &note->playbackState;
         if (playbackState->parentLayer != NO_LAYER) {
-#ifndef __WIIU__
-            // OTRTODO: This skips playback if the pointer is below where memory on the N64 normally would be.
-            // This does not translate well to modern platforms and how they map memory.
-            // Considering that this check is not present in OoT/SoH, we may be able to remove this altogether.
-            if ((uintptr_t)playbackState->parentLayer < 0x7FFFFFFF) {
-                continue;
-            }
-#endif
+            // 2S2H [Port] The original N64-address guard misfires on 64-bit host builds when
+            // SequenceLayers from the static audio heap are placed below 0x7FFFFFFF (for example,
+            // in a non-PIE layout). It then skips every note update, leaving SFX silent. OoT/SoH
+            // has no equivalent guard and NO_LAYER is already handled above.
 
             if ((note != playbackState->parentLayer->note) && (playbackState->status == PLAYBACK_STATUS_0)) {
                 playbackState->adsr.action.s.release = true;

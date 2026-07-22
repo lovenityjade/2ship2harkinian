@@ -8,9 +8,21 @@
 #include "2s2h/ShipInit.hpp"
 #include <ship/window/FileDropMgr.h>
 #include <ship/Context.h>
+#include "2s2h/Network/Archipelago/Archipelago.h"
+
+extern "C" s32 Rando_HasSkeletonKey(void) {
+    return IS_RANDO && Flags_GetRandoInf(RANDO_INF_OBTAINED_SKELETON_KEY);
+}
 
 // When a save is loaded, we want to unregister all hooks and re-register them if it's a rando save
 void OnSaveLoadHandler(s16 fileNum) {
+    Archipelago::Client& apClient = Archipelago::Client::Instance();
+    if (IS_ARCHIPELAGO && !apClient.IsConnected()) {
+        apClient.Connect();
+    } else if (!IS_ARCHIPELAGO && apClient.GetStatus() != Archipelago::ConnectionStatus::Disconnected) {
+        apClient.Disconnect();
+    }
+
     Rando::MiscBehavior::OnFileLoad();
     Rando::ActorBehavior::OnFileLoad();
     Rando::CheckTracker::OnFileLoad();
@@ -26,6 +38,7 @@ void Rando::Init() {
     Rando::MiscBehavior::Init();
     Rando::ActorBehavior::Init();
     Rando::CheckTracker::Init();
+    Archipelago::Init();
     Ship::Context::GetInstance()->GetFileDropMgr()->RegisterDropHandler(Rando::Spoiler::HandleFileDropped);
 
     GameInteractor::Instance->RegisterGameHook<GameInteractor::OnSaveLoad>(OnSaveLoadHandler);

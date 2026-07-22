@@ -7,6 +7,7 @@
 #include "ClockShuffle.h"
 #include <spdlog/spdlog.h>
 #include "2s2h/BenGui/Notification.h"
+#include "2s2h/Network/Archipelago/Archipelago.h"
 
 extern "C" {
 #include "functions.h"
@@ -19,7 +20,24 @@ extern "C" {
 // we set the save type to rando and shuffle all checks and persist the results to the save
 void Rando::MiscBehavior::OnFileCreate(s16 fileNum) {
     if (CVarGetInteger("gRando.Enabled", 0)) {
-        gSaveContext.save.shipSaveInfo.saveType = SAVETYPE_RANDO;
+        const bool archipelagoMode =
+            CVarGetInteger("gRando.Mode", RANDO_RUN_MODE_LOCAL) == RANDO_RUN_MODE_ARCHIPELAGO;
+        if (archipelagoMode && !Archipelago::Client::Instance().IsReady()) {
+            Notification::Emit({
+                .prefix = "Archipelago file not created:",
+                .prefixColor = ImVec4(1.0f, 0.35f, 0.35f, 1.0f),
+                .message = "wait until the slot data and location scout are ready.",
+            });
+            gSaveContext.save.shipSaveInfo.saveType = SAVETYPE_VANILLA;
+            memset(gSaveContext.save.saveInfo.playerData.playerName, 0x3E,
+                   sizeof(gSaveContext.save.saveInfo.playerData.playerName));
+            gSaveContext.save.saveInfo.playerData.newf[0] = '\0';
+            Audio_PlaySfx(NA_SE_SY_QUIZ_INCORRECT);
+            return;
+        }
+
+        gSaveContext.save.shipSaveInfo.saveType =
+            archipelagoMode ? SAVETYPE_ARCHIPELAGO : SAVETYPE_RANDO;
         // Zero out the rando struct
         memset(&gSaveContext.save.shipSaveInfo.rando, 0, sizeof(gSaveContext.save.shipSaveInfo.rando));
         // Copy whatever the current dungeon keys are, they're initialized as -1 in the save, not 0
@@ -42,6 +60,17 @@ void Rando::MiscBehavior::OnFileCreate(s16 fileNum) {
         SET_EQUIP_VALUE(EQUIP_TYPE_SWORD, EQUIP_VALUE_SWORD_NONE);
         BUTTON_ITEM_EQUIP(0, EQUIP_SLOT_B) = ITEM_NONE;
         SET_EQUIP_VALUE(EQUIP_TYPE_SHIELD, EQUIP_VALUE_SHIELD_NONE);
+
+        if (archipelagoMode) {
+            if (!Archipelago::Client::Instance().InitializeSave()) {
+                gSaveContext.save.shipSaveInfo.saveType = SAVETYPE_VANILLA;
+                gSaveContext.save.saveInfo.playerData.newf[0] = '\0';
+                return;
+            }
+            GameInteractor::Instance->ExecuteHooks<GameInteractor::OnRandoSeedGeneration>();
+            Audio_PlaySfx(NA_SE_SY_ATTENTION_SOUND);
+            return;
+        }
 
         try {
             // SpoilerFileIndex == 0 means we're generating a new one
