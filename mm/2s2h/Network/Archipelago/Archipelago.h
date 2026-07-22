@@ -143,6 +143,7 @@ class Client {
     std::unordered_set<int32_t> activeLocations;
     std::unordered_set<RandoCheckId> serverCheckedLocations;
     std::unordered_map<std::string, int32_t> randoOptions;
+    std::unordered_map<RandoCheckId, uint16_t> shopPrices;
     ConnectionStatus status = ConnectionStatus::Disconnected;
     bool goalSent = false;
     std::string logMessage;

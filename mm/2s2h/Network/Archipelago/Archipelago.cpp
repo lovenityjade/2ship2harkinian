@@ -30,7 +30,7 @@ constexpr const char* SlotCVar = "gRemote.Archipelago.SlotName";
 constexpr const char* PasswordCVar = "gRemote.Archipelago.Password";
 constexpr const char* LastItemCVar = "gRemote.Archipelago.LastReceivedItem";
 constexpr const char* LastSessionCVar = "gRemote.Archipelago.LastSession";
-constexpr const char* WorldVersion = "0.4";
+constexpr const char* WorldVersion = "0.5";
 constexpr const char* ProgressiveIcon = "Archipelago Progressive Icon";
 constexpr const char* UsefulIcon = "Archipelago Useful Icon";
 constexpr const char* JunkIcon = "Archipelago Junk Icon";
@@ -117,6 +117,7 @@ void Client::ConfigureHandlers() {
         scoutedLocations.clear();
         locationsScouted = false;
         randoOptions.clear();
+        shopPrices.clear();
         if (slotData.contains("active_locations")) {
             for (const int32_t checkId : slotData["active_locations"].get<std::vector<int32_t>>()) {
                 activeLocations.insert(checkId);
@@ -126,6 +127,19 @@ void Client::ConfigureHandlers() {
             for (const auto& [optionName, optionValue] : slotData["rando_options"].items()) {
                 if (optionValue.is_number_integer()) {
                     randoOptions[optionName] = optionValue.get<int32_t>();
+                }
+            }
+        }
+        if (slotData.contains("shop_prices") && slotData["shop_prices"].is_array()) {
+            for (const auto& entry : slotData["shop_prices"]) {
+                if (!entry.is_array() || entry.size() != 2 || !entry[0].is_number_integer() ||
+                    !entry[1].is_number_integer()) {
+                    continue;
+                }
+                const int32_t checkId = entry[0].get<int32_t>();
+                const int32_t price = entry[1].get<int32_t>();
+                if (checkId > RC_UNKNOWN && checkId < RC_MAX && price >= 0 && price <= UINT16_MAX) {
+                    shopPrices[static_cast<RandoCheckId>(checkId)] = static_cast<uint16_t>(price);
                 }
             }
         }
@@ -443,6 +457,10 @@ bool Client::InitializeSave() {
     for (const auto& [checkId, check] : Rando::StaticData::Checks) {
         RandoSaveCheck& saveCheck = RANDO_SAVE_CHECKS[checkId];
         saveCheck.shuffled = activeLocations.contains(checkId);
+        const auto price = shopPrices.find(checkId);
+        if (price != shopPrices.end()) {
+            saveCheck.price = price->second;
+        }
         if (!saveCheck.shuffled) {
             continue;
         }
